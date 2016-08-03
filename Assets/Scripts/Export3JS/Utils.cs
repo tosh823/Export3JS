@@ -7,11 +7,12 @@ namespace Export3JS {
     public static class Utils {
         
         public static float[] getMatrixAsArray(Matrix4x4 input) {
+            // ThreeJS parses in column-major format
             float[] output = new float[16];
-            for (int i = 0; i < 16; i++) {
-                int row = i / 4;
-                int column = i % 4;
-                output[i] = input[row, column];
+            for (int column = 0; column < 4; column++) {
+                for (int row = 0; row < 4; row++) {
+                    output[column * 4 + row] = input[row, column];
+                }   
             }
             return output;
         }

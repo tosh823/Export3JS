@@ -163,7 +163,7 @@ namespace Export3JS {
             // Normals
             geometry.data.normals = new float[mesh.normals.Length * 3];
             Vector3[] normals = mesh.normals;
-            for (int i = 0; i < mesh.normals.Length; i++) {
+            for (int i = 0; i < normals.Length; i++) {
                 Vector3 normal = normals[i];
                 geometry.data.normals[i * 3] = normal.x;
                 geometry.data.normals[i * 3 + 1] = normal.y;
@@ -172,14 +172,31 @@ namespace Export3JS {
             // UV
             geometry.data.uvs = new float[mesh.uv.Length * 2];
             Vector2[] uvs = mesh.uv;
-            for (int i = 0; i < mesh.normals.Length; i++) {
+            for (int i = 0; i < uvs.Length; i++) {
                 Vector2 uv = uvs[i];
                 geometry.data.uvs[i * 2] = uv.x;
                 geometry.data.uvs[i * 2 + 1] = uv.y;
             }
-            // Indices
-            geometry.data.faces = new int[mesh.triangles.Length];
-            geometry.data.faces = mesh.triangles;
+            // Colors
+            geometry.data.colors = new float[mesh.colors.Length * 3];
+            Color[] colors = mesh.colors;
+            for (int i = 0; i < colors.Length; i++) {
+                Color color = colors[i];
+                geometry.data.colors[i * 3] = color.r;
+                geometry.data.colors[i * 3 + 1] = color.b;
+                geometry.data.colors[i * 3 + 2] = color.g;
+            }
+            // Faces
+            int count = mesh.triangles.Length / 3;
+            geometry.data.faces = new int[mesh.triangles.Length + count];
+            for (int i = 0; i < count; i++) {
+                int triangle = i * 3;
+                int face = triangle + i;
+                geometry.data.faces[face] = 0;
+                geometry.data.faces[face + 1] = mesh.triangles[triangle];
+                geometry.data.faces[face + 2] = mesh.triangles[triangle + 1];
+                geometry.data.faces[face + 3] = mesh.triangles[triangle + 2];
+            }
 
             content.geometries.Add(geometry);
             geometries.Add(geometry.uuid, mesh);

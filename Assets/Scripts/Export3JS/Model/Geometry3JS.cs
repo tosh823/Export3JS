@@ -36,6 +36,7 @@ namespace Export3JS.Model {
         public float[] normals;
         public float[] uvs;
         public int[] faces;
+        public float[] colors;
 
         public Geometry3JSData() {
             
