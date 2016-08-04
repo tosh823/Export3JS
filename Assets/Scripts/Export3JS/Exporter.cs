@@ -13,11 +13,13 @@ namespace Export3JS {
         private string dir;
         private Format4 content;
         private Dictionary<string, Material> materials;
+        private Dictionary<string, Material[]> multiMaterials;
         private Dictionary<string, Mesh> geometries;
 
         public Exporter(string dir) {
             this.dir = dir;
             materials = new Dictionary<string, Material>();
+            multiMaterials = new Dictionary<string, Material[]>();
             geometries = new Dictionary<string, Mesh>();
         }
 
@@ -67,8 +69,10 @@ namespace Export3JS {
             Object3JSMesh mesh = new Object3JSMesh();
             mesh.name = gameObject.name;
             mesh.matrix = Utils.getMatrixAsArray(gameObject.transform.localToWorldMatrix);
+            if (gameObject.GetComponent<Renderer>() != null) {
+                mesh.material = parseMaterials(gameObject);
+            }
             if (gameObject.GetComponent<MeshFilter>() != null) mesh.geometry = parseGeometries(gameObject);
-            if (gameObject.GetComponent<Renderer>() != null) mesh.material = parseMaterials(gameObject);
             // Parse children
             if (gameObject.transform.childCount > 0) {
                 foreach (Transform child in gameObject.transform) {
@@ -187,17 +191,43 @@ namespace Export3JS {
                 geometry.data.colors[i * 3 + 2] = color.g;
             }
             // Faces
-            int count = mesh.triangles.Length / 3;
-            geometry.data.faces = new int[mesh.triangles.Length + count];
-            for (int i = 0; i < count; i++) {
-                int triangle = i * 3;
-                int face = triangle + i;
-                geometry.data.faces[face] = 0;
-                geometry.data.faces[face + 1] = mesh.triangles[triangle];
-                geometry.data.faces[face + 2] = mesh.triangles[triangle + 1];
-                geometry.data.faces[face + 3] = mesh.triangles[triangle + 2];
+            if (mesh.subMeshCount > 1) {
+                int code = 2; // 2, [vertex_index, vertex_index, vertex_index], [material_index]
+                int count = mesh.triangles.Length / 3;
+                int subMeshCount = mesh.subMeshCount;
+                geometry.data.faces = new int[mesh.triangles.Length + 2 * count];
+                Debug.Log("Total size: " + (mesh.triangles.Length + 2 * count));
+                int shift = 0;
+                for (int subMesh = 0; subMesh < subMeshCount; subMesh++) {
+                    int[] subMeshTriangles = mesh.GetTriangles(subMesh);
+                    int trianglesCount = subMeshTriangles.Length / 3;
+                    for (int i = 0; i < trianglesCount; i++) {
+                        int vertex = i * 3;
+                        int pos = shift + vertex + 2*i;
+                        geometry.data.faces[pos] = code;
+                        geometry.data.faces[pos + 1] = subMeshTriangles[vertex];
+                        geometry.data.faces[pos + 2] = subMeshTriangles[vertex + 1];
+                        geometry.data.faces[pos + 3] = subMeshTriangles[vertex + 2];
+                        geometry.data.faces[pos + 4] = subMesh;
+                    }
+                    shift += (subMeshTriangles.Length + 2 * trianglesCount);
+                    Debug.Log("Shift is " + shift);
+                }
             }
-
+            else {
+                int code = 0; // 0, [vertex_index, vertex_index, vertex_index]
+                int count = mesh.triangles.Length / 3;
+                geometry.data.faces = new int[mesh.triangles.Length + count];
+                for (int i = 0; i < count; i++) {
+                    int vertex = i * 3;
+                    int pos = vertex + i;
+                    geometry.data.faces[pos] = code;
+                    geometry.data.faces[pos + 1] = mesh.triangles[vertex];
+                    geometry.data.faces[pos + 2] = mesh.triangles[vertex + 1];
+                    geometry.data.faces[pos + 3] = mesh.triangles[vertex + 2];
+                }
+            }
+           
             content.geometries.Add(geometry);
             geometries.Add(geometry.uuid, mesh);
             return geometry.uuid;
@@ -205,46 +235,83 @@ namespace Export3JS {
 
         private string parseMaterials(GameObject gameObject) {
             Renderer renderer = gameObject.GetComponent<Renderer>();
-            Material material = renderer.sharedMaterial;
-            bool contains = false;
-            string uuid = "";
-            foreach (KeyValuePair<string, Material> pair in materials) {
-                if (pair.Value.Equals(material)) {
-                    contains = true;
-                    uuid = pair.Key;
-                    break;
+            string uuid = string.Empty;
+            if (renderer.sharedMaterials.Length > 1) {
+                Material[] objMaterials = renderer.sharedMaterials;
+                // If cash contains the same array of materials, get their uuid
+                // Else create a new one
+                if (!Utils.dictContainsArray(out uuid, multiMaterials, objMaterials)) {
+                    uuid = createMultiMaterial(objMaterials);
                 }
-            }
-            if (!contains) {
-                uuid = createMaterial(material);
+            } 
+            else {
+                Material objMaterial = renderer.sharedMaterial;
+                // If cash contains the same material, get its uuid
+                // Else create a new one
+                if (!Utils.dictContainsValue(out uuid, materials, objMaterial)) {
+                    uuid = createMaterial(objMaterial);
+                }
             }
             return uuid;
         }
 
         private string createMaterial(Material mat) {
-            Material3JS jsMat = new Material3JS();
-            jsMat.name = mat.name;
+            MeshPhongMaterial3JS matJS = new MeshPhongMaterial3JS();
+            matJS.name = mat.name;
             // Colors
-            jsMat.color = Utils.getIntColor(mat.color);
-            if (mat.HasProperty("_SpecColor")) jsMat.specular = Utils.getIntColor(mat.GetColor("_SpecColor"));
-            if (mat.HasProperty("_EmissionColor")) jsMat.emissive = Utils.getIntColor(mat.GetColor("_EmissionColor"));
-            if (mat.HasProperty("_AmbientColor")) jsMat.ambient = Utils.getIntColor(mat.GetColor("_AmbientColor"));
-            if (mat.HasProperty("_Shininess")) jsMat.shininess = mat.GetFloat("_Shininess");
+            matJS.color = Utils.getIntColor(mat.color);
+            if (mat.HasProperty("_SpecColor")) {
+                matJS.specular = Utils.getIntColor(mat.GetColor("_SpecColor"));
+            }
+            if (mat.HasProperty("_EmissionColor")) {
+                matJS.emissive = Utils.getIntColor(mat.GetColor("_EmissionColor"));
+            }
+            if (mat.HasProperty("_AmbientColor")) {
+                matJS.ambient = Utils.getIntColor(mat.GetColor("_AmbientColor"));
+            }
+            if (mat.HasProperty("_Shininess")) {
+                matJS.shininess = mat.GetFloat("_Shininess");
+            }
             // Textures
-            /*if (mat.HasProperty("_MainTex")) {
+            if (mat.HasProperty("_MainTex")) {
                 Texture mainTexture = mat.GetTexture("_MainTex");
                 if (mainTexture != null) {
                     string uuid = createTexture(mainTexture, mat);
-                    if (string.IsNullOrEmpty(uuid)) jsMat.map = uuid;
+                    if (string.IsNullOrEmpty(uuid)) matJS.map = uuid;
                 }
-            }*/
+            }
             // Opacity and wireframe
-            jsMat.opacity = mat.color.a;
-            jsMat.transparent = false;
-            jsMat.wireframe = false;
-            content.materials.Add(jsMat);
-            materials.Add(jsMat.uuid, mat);
-            return jsMat.uuid;
+            matJS.opacity = mat.color.a;
+            matJS.transparent = false;
+            matJS.wireframe = false;
+
+            content.materials.Add(matJS);
+            materials.Add(matJS.uuid, mat);
+            return matJS.uuid;
+        }
+
+        private string createMultiMaterial(Material[] mats) {
+            MultiMaterial3JS multiMatJS = new MultiMaterial3JS();
+            multiMatJS.name = "MultiMaterial";
+            foreach (Material mat in mats) {
+                string uuid = string.Empty;
+                if (Utils.dictContainsValue(out uuid, materials, mat)) {
+                    // If we already had the same material, find it
+                    Material3JS existingMatJS = content.materials.Find(x => (x.uuid.Equals(uuid)));
+                    multiMatJS.materials.Add(existingMatJS);
+                }
+                else {
+                    // Else create one
+                    // And, duhh, find it too
+                    uuid = createMaterial(mat);
+                    Material3JS existingMatJS = content.materials.Find(x => (x.uuid.Equals(uuid)));
+                    multiMatJS.materials.Add(existingMatJS);
+                }
+            }
+
+            content.materials.Add(multiMatJS);
+            multiMaterials.Add(multiMatJS.uuid, mats);
+            return multiMatJS.uuid;
         }
 
         private string createTexture(Texture tex, Material mat) {

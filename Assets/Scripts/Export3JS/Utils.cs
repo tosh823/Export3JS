@@ -1,5 +1,5 @@
 ﻿using UnityEngine;
-using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 
 namespace Export3JS {
@@ -15,6 +15,39 @@ namespace Export3JS {
                 }   
             }
             return output;
+        }
+
+        public static bool dictContainsValue<T>(out string uuid, Dictionary<string, T> dict, T value) {
+            uuid = string.Empty;
+            foreach (KeyValuePair<string, T> pair in dict) {
+                if (pair.Value.Equals(value)) {
+                    uuid = pair.Key;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public static bool dictContainsArray<T>(out string uuid, Dictionary<string, T[]> dict, T[] array) {
+            uuid = string.Empty;
+            foreach (KeyValuePair<string, T[]> pair in dict) {
+                bool equals = false;
+                if (pair.Value.Length != array.Length) continue;
+                for (int i = 0; i < pair.Value.Length; i++) {
+                    if (pair.Value[i].Equals(array[i])) {
+                        equals = true;
+                    }
+                    else {
+                        equals = false;
+                        break;
+                    }
+                }
+                if (equals) {
+                    uuid = pair.Key;
+                    return true;
+                }
+            }
+            return false;
         }
 
         public static int getIntColor(Color inputColor) {
