@@ -1,8 +1,17 @@
 ﻿using UnityEngine;
-using System.Collections.Generic;
+using System;
 using System.IO;
+using System.Collections.Generic;
 
 namespace Export3JS {
+
+    [Flags]
+    public enum FaceMask {
+        TRIANGLE = 0,
+        FACE_MATERIAL = 2,
+        FACE_VERTEX_UV = 8,
+        VERTEX_NORMAL = 32
+    }
 
     public static class Utils {
         

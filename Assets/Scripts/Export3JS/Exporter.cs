@@ -155,6 +155,12 @@ namespace Export3JS {
             Geometry3JS geometry = new Geometry3JS();
             geometry.name = meshFilter.name;
             Mesh mesh = meshFilter.sharedMesh;
+            Debug.Log(meshFilter.gameObject.name);
+            Debug.Log("Vertices count " + mesh.vertexCount);
+            Debug.Log("Triangles count " + mesh.triangles.Length);
+            Debug.Log("UV count " + mesh.uv.Length);
+            Debug.Log("Normal count " + mesh.normals.Length);
+            FaceMask code = FaceMask.TRIANGLE;
             // Vertices
             geometry.data.vertices = new float[mesh.vertexCount * 3];
             Vector3[] vertices = mesh.vertices;
@@ -167,6 +173,7 @@ namespace Export3JS {
             // Normals
             geometry.data.normals = new float[mesh.normals.Length * 3];
             Vector3[] normals = mesh.normals;
+            if (normals.Length > 0) code = code | FaceMask.VERTEX_NORMAL;
             for (int i = 0; i < normals.Length; i++) {
                 Vector3 normal = normals[i];
                 geometry.data.normals[i * 3] = normal.x;
@@ -174,12 +181,13 @@ namespace Export3JS {
                 geometry.data.normals[i * 3 + 2] = normal.z;
             }
             // UV
-            geometry.data.uvs = new float[mesh.uv.Length * 2];
+            geometry.data.uvs = new float[1, mesh.uv.Length * 2];
             Vector2[] uvs = mesh.uv;
+            if (uvs.Length > 0) code = code | FaceMask.FACE_VERTEX_UV;
             for (int i = 0; i < uvs.Length; i++) {
                 Vector2 uv = uvs[i];
-                geometry.data.uvs[i * 2] = uv.x;
-                geometry.data.uvs[i * 2 + 1] = uv.y;
+                geometry.data.uvs[0, i * 2] = uv.x;
+                geometry.data.uvs[0, i * 2 + 1] = uv.y;
             }
             // Colors
             geometry.data.colors = new float[mesh.colors.Length * 3];
@@ -191,43 +199,51 @@ namespace Export3JS {
                 geometry.data.colors[i * 3 + 2] = color.g;
             }
             // Faces
-            if (mesh.subMeshCount > 1) {
-                int code = 2; // 2, [vertex_index, vertex_index, vertex_index], [material_index]
-                int count = mesh.triangles.Length / 3;
-                int subMeshCount = mesh.subMeshCount;
-                geometry.data.faces = new int[mesh.triangles.Length + 2 * count];
-                Debug.Log("Total size: " + (mesh.triangles.Length + 2 * count));
-                int shift = 0;
-                for (int subMesh = 0; subMesh < subMeshCount; subMesh++) {
-                    int[] subMeshTriangles = mesh.GetTriangles(subMesh);
-                    int trianglesCount = subMeshTriangles.Length / 3;
-                    for (int i = 0; i < trianglesCount; i++) {
-                        int vertex = i * 3;
-                        int pos = shift + vertex + 2*i;
-                        geometry.data.faces[pos] = code;
-                        geometry.data.faces[pos + 1] = subMeshTriangles[vertex];
-                        geometry.data.faces[pos + 2] = subMeshTriangles[vertex + 1];
-                        geometry.data.faces[pos + 3] = subMeshTriangles[vertex + 2];
-                        geometry.data.faces[pos + 4] = subMesh;
-                    }
-                    shift += (subMeshTriangles.Length + 2 * trianglesCount);
-                    Debug.Log("Shift is " + shift);
-                }
+            int count = mesh.triangles.Length / 3;
+            int subMeshCount = mesh.subMeshCount;
+            if (subMeshCount > 1) code = code | FaceMask.FACE_MATERIAL;
+            switch ((int)code) {
+                case 0:
+                    // 0, [vertex_index, vertex_index, vertex_index]
+                    geometry.data.faces = createFaces(mesh);
+                    break;
+                case 2:
+                    // 2, [vertex_index, vertex_index, vertex_index],
+                    // [material_index]
+                    geometry.data.faces = createFacesWithMaterials(mesh);
+                    break;
+                case 8:
+                    // 8, [vertex_index, vertex_index, vertex_index],
+                    // [vertex_uv, vertex_uv, vertex_uv]
+                    geometry.data.faces = createFacesWithUV(mesh);
+                    break;
+                case 10:
+                    // 10, [vertex_index, vertex_index, vertex_index],
+                    // [material_index],
+                    // [vertex_uv, vertex_uv, vertex_uv]
+                    geometry.data.faces = createFacesWithMaterialsUV(mesh);
+                    break;
+                case 34:
+                    // 34, [vertex_index, vertex_index, vertex_index],
+                    // [material_index],
+                    // [vertex_normal, vertex_normal, vertex_normal]
+                    geometry.data.faces = createFacesWithMaterialsNormals(mesh);
+                    break;
+                case 40:
+                    // 40, [vertex_index, vertex_index, vertex_index],
+                    // [vertex_uv, vertex_uv, vertex_uv],
+                    // [vertex_normal, vertex_normal, vertex_normal]
+                    geometry.data.faces = createFacesWithUVNormals(mesh);
+                    break;
+                case 42:
+                    // 42, [vertex_index, vertex_index, vertex_index],
+                    // [material_index],
+                    // [vertex_uv, vertex_uv, vertex_uv],
+                    // [vertex_normal, vertex_normal, vertex_normal]
+                    geometry.data.faces = createFacesWithMaterialsUVNormals(mesh);
+                    break;
+
             }
-            else {
-                int code = 0; // 0, [vertex_index, vertex_index, vertex_index]
-                int count = mesh.triangles.Length / 3;
-                geometry.data.faces = new int[mesh.triangles.Length + count];
-                for (int i = 0; i < count; i++) {
-                    int vertex = i * 3;
-                    int pos = vertex + i;
-                    geometry.data.faces[pos] = code;
-                    geometry.data.faces[pos + 1] = mesh.triangles[vertex];
-                    geometry.data.faces[pos + 2] = mesh.triangles[vertex + 1];
-                    geometry.data.faces[pos + 3] = mesh.triangles[vertex + 2];
-                }
-            }
-           
             content.geometries.Add(geometry);
             geometries.Add(geometry.uuid, mesh);
             return geometry.uuid;
@@ -277,7 +293,7 @@ namespace Export3JS {
                 Texture mainTexture = mat.GetTexture("_MainTex");
                 if (mainTexture != null) {
                     string uuid = createTexture(mainTexture, mat);
-                    if (string.IsNullOrEmpty(uuid)) matJS.map = uuid;
+                    if (!string.IsNullOrEmpty(uuid)) matJS.map = uuid;
                 }
             }
             // Opacity and wireframe
@@ -306,6 +322,9 @@ namespace Export3JS {
                     uuid = createMaterial(mat);
                     Material3JS existingMatJS = content.materials.Find(x => (x.uuid.Equals(uuid)));
                     multiMatJS.materials.Add(existingMatJS);
+                    // Because we created new material for the purpose of it
+                    // Remove it from other materials
+                    content.materials.Remove(existingMatJS);
                 }
             }
 
@@ -322,18 +341,17 @@ namespace Export3JS {
             string relativePath = AssetDatabase.GetAssetPath(tex);
             string url = Utils.copyTexture(relativePath, dir);
             if (!string.IsNullOrEmpty(url)) {
-                jsImg.url = '/' + url;
+                jsImg.url = url;
                 jsText.image = jsImg.uuid;
-                jsText.wrap = new float[2] { mat.mainTextureScale.x, mat.mainTextureScale.y };
                 // Wrap mode
-                /*switch (tex.wrapMode) {
+                switch (tex.wrapMode) {
                     case TextureWrapMode.Repeat:
-                        jsText.wrap = new string[2] { "repeat", "repeat" };
+                        jsText.wrap = new int[2] { WrapType.RepeatWrapping, WrapType.RepeatWrapping };
                         break;
                     case TextureWrapMode.Clamp:
-                        jsText.wrap = new string[2] { "clamp", "clamp" };
+                        jsText.wrap = new int[2] { WrapType.ClampToEdgeWrapping, WrapType.ClampToEdgeWrapping };
                         break;
-                }*/
+                }
                 jsText.repeat = new float[2] { mat.mainTextureScale.x, mat.mainTextureScale.y };
                 // Add to content
                 content.images.Add(jsImg);
@@ -341,6 +359,121 @@ namespace Export3JS {
                 return jsText.uuid;
             }
             else return null;
+        }
+
+        // 0, [vertex_index, vertex_index, vertex_index]
+        private int[] createFaces(Mesh mesh, int code = 0) {
+            int totalTrianglesCount = mesh.triangles.Length / 3;
+            int[] faces = new int[mesh.triangles.Length + totalTrianglesCount];
+            for (int i = 0; i < totalTrianglesCount; i++) {
+                int vertex = i * 3;
+                int pos = i + vertex;
+                faces[pos] = code;
+                faces[pos + 1] = mesh.triangles[vertex];
+                faces[pos + 2] = mesh.triangles[vertex + 1];
+                faces[pos + 3] = mesh.triangles[vertex + 2];
+            }
+            return faces;
+        }
+
+        // 2, [vertex_index, vertex_index, vertex_index],
+        // [material_index]
+        private int[] createFacesWithMaterials(Mesh mesh, int code = 2) {
+            int totalTrianglesCount = mesh.triangles.Length / 3;
+            int subMeshCount = mesh.subMeshCount;
+            int[] faces = new int[mesh.triangles.Length + 2 * totalTrianglesCount];
+            int shift = 0;
+            for (int subMesh = 0; subMesh < subMeshCount; subMesh++) {
+                int[] subMeshTriangles = mesh.GetTriangles(subMesh);
+                int trianglesCount = subMeshTriangles.Length / 3;
+                for (int i = 0; i < trianglesCount; i++) {
+                    int vertex = i * 3;
+                    int pos = shift + i + vertex + i;
+                    faces[pos] = code;
+                    faces[pos + 1] = subMeshTriangles[vertex];
+                    faces[pos + 2] = subMeshTriangles[vertex + 1];
+                    faces[pos + 3] = subMeshTriangles[vertex + 2];
+                    faces[pos + 4] = subMesh;
+                }
+                shift += (subMeshTriangles.Length + 2 * trianglesCount);
+            }
+            return faces;
+        }
+
+        // 8, [vertex_index, vertex_index, vertex_index],
+        // [vertex_uv, vertex_uv, vertex_uv]
+        private int[] createFacesWithUV(Mesh mesh, int code = 8) {
+            int totalTrianglesCount = mesh.triangles.Length / 3;
+            int[] faces = new int[2 * mesh.triangles.Length + totalTrianglesCount];
+            Vector2[] uvs = mesh.uv;
+            for (int i = 0; i < totalTrianglesCount; i++) {
+                int vertex = i * 3;
+                int pos = i + vertex * 2;
+                faces[pos] = code;
+                faces[pos + 1] = mesh.triangles[vertex];
+                faces[pos + 2] = mesh.triangles[vertex + 1];
+                faces[pos + 3] = mesh.triangles[vertex + 2];
+                faces[pos + 4] = mesh.triangles[vertex];
+                faces[pos + 5] = mesh.triangles[vertex + 1];
+                faces[pos + 6] = mesh.triangles[vertex + 2];
+            }
+            return faces;
+        }
+
+        // 10, [vertex_index, vertex_index, vertex_index],
+        // [material_index],
+        // [vertex_uv, vertex_uv, vertex_uv]
+        private int[] createFacesWithMaterialsUV(Mesh mesh, int code = 10) {
+            int totalTrianglesCount = mesh.triangles.Length / 3;
+            int subMeshCount = mesh.subMeshCount;
+            int[] faces = new int[0];
+            return faces;
+        }
+
+        // 40, [vertex_index, vertex_index, vertex_index],
+        // [vertex_uv, vertex_uv, vertex_uv],
+        // [vertex_normal, vertex_normal, vertex_normal]
+        private int[] createFacesWithUVNormals(Mesh mesh, int code = 40) {
+            int totalTrianglesCount = mesh.triangles.Length / 3;
+            int[] faces = new int[3 * mesh.triangles.Length + totalTrianglesCount];
+            Vector2[] uvs = mesh.uv;
+            Vector3[] normals = mesh.normals;
+            for (int i = 0; i < totalTrianglesCount; i++) {
+                int vertex = i * 3;
+                int pos = i + vertex * 3;
+                faces[pos] = code;
+                faces[pos + 1] = mesh.triangles[vertex];
+                faces[pos + 2] = mesh.triangles[vertex + 1];
+                faces[pos + 3] = mesh.triangles[vertex + 2];
+                faces[pos + 4] = mesh.triangles[vertex];
+                faces[pos + 5] = mesh.triangles[vertex + 1];
+                faces[pos + 6] = mesh.triangles[vertex + 2];
+                faces[pos + 7] = mesh.triangles[vertex];
+                faces[pos + 8] = mesh.triangles[vertex + 1];
+                faces[pos + 9] = mesh.triangles[vertex + 2];
+            }
+            return faces;
+        }
+
+        // 34, [vertex_index, vertex_index, vertex_index],
+        // [material_index],
+        // [vertex_normal, vertex_normal, vertex_normal]
+        private int[] createFacesWithMaterialsNormals(Mesh mesh, int code = 34) {
+            int totalTrianglesCount = mesh.triangles.Length / 3;
+            int subMeshCount = mesh.subMeshCount;
+            int[] faces = new int[0];
+            return faces;
+        }
+
+        // 42, [vertex_index, vertex_index, vertex_index],
+        // [material_index],
+        // [vertex_uv, vertex_uv, vertex_uv],
+        // [vertex_normal, vertex_normal, vertex_normal]
+        private int[] createFacesWithMaterialsUVNormals(Mesh mesh, int code = 42) {
+            int totalTrianglesCount = mesh.triangles.Length / 3;
+            int subMeshCount = mesh.subMeshCount;
+            int[] faces = new int[0];
+            return faces;
         }
     }
 }

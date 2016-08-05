@@ -1,5 +1,5 @@
 ﻿using UnityEngine;
-using System.Collections;
+using System.Collections.Generic;
 
 namespace Export3JS.Model {
 
@@ -34,7 +34,7 @@ namespace Export3JS.Model {
     public class Geometry3JSData {
         public float[] vertices;
         public float[] normals;
-        public float[] uvs;
+        public float[,] uvs;
         public int[] faces;
         public float[] colors;
 
