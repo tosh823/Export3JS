@@ -155,11 +155,10 @@ namespace Export3JS {
             Geometry3JS geometry = new Geometry3JS();
             geometry.name = meshFilter.name;
             Mesh mesh = meshFilter.sharedMesh;
-            Debug.Log(meshFilter.gameObject.name);
-            Debug.Log("Vertices count " + mesh.vertexCount);
-            Debug.Log("Triangles count " + mesh.triangles.Length);
-            Debug.Log("UV count " + mesh.uv.Length);
-            Debug.Log("Normal count " + mesh.normals.Length);
+            geometry.metadata.vertices = mesh.vertexCount;
+            geometry.metadata.normals = mesh.normals.Length;
+            geometry.metadata.uvs = mesh.uv.Length;
+            geometry.metadata.faces = mesh.triangles.Length;
             FaceMask code = FaceMask.TRIANGLE;
             // Vertices
             geometry.data.vertices = new float[mesh.vertexCount * 3];
@@ -223,6 +222,11 @@ namespace Export3JS {
                     // [vertex_uv, vertex_uv, vertex_uv]
                     geometry.data.faces = createFacesWithMaterialsUV(mesh);
                     break;
+                case 32:
+                    // 32, [vertex_index, vertex_index, vertex_index],
+                    // [vertex_normal, vertex_normal, vertex_normal]
+                    geometry.data.faces = createFacesWithNormals(mesh);
+                    break;
                 case 34:
                     // 34, [vertex_index, vertex_index, vertex_index],
                     // [material_index],
@@ -280,20 +284,48 @@ namespace Export3JS {
                 matJS.specular = Utils.getIntColor(mat.GetColor("_SpecColor"));
             }
             if (mat.HasProperty("_EmissionColor")) {
+                mat.EnableKeyword("_EMISSION");
                 matJS.emissive = Utils.getIntColor(mat.GetColor("_EmissionColor"));
             }
-            if (mat.HasProperty("_AmbientColor")) {
-                matJS.ambient = Utils.getIntColor(mat.GetColor("_AmbientColor"));
+            // Values
+            if (mat.HasProperty("_Emission")) {
+                // Standrad shader doesn't have this value in Unity 5 :(
+                matJS.emissiveIntensity = mat.GetFloat("_Emission");
             }
             if (mat.HasProperty("_Shininess")) {
                 matJS.shininess = mat.GetFloat("_Shininess");
             }
-            // Textures
+            // Maps
+            // Main texture
             if (mat.HasProperty("_MainTex")) {
                 Texture mainTexture = mat.GetTexture("_MainTex");
                 if (mainTexture != null) {
                     string uuid = createTexture(mainTexture, mat);
                     if (!string.IsNullOrEmpty(uuid)) matJS.map = uuid;
+                }
+            }
+            // Normal map
+            if (mat.HasProperty("_BumpMap")) {
+                Texture normalMap = mat.GetTexture("_BumpMap");
+                if (normalMap != null) {
+                    string uuid = createTexture(normalMap, mat);
+                    if (!string.IsNullOrEmpty(uuid)) matJS.normalMap = uuid;
+                }
+            }
+            // Emissive map
+            if (mat.HasProperty("_EmissionMap")) {
+                Texture emissionMap = mat.GetTexture("_EmissionMap");
+                if (emissionMap != null) {
+                    string uuid = createTexture(emissionMap, mat);
+                    if (!string.IsNullOrEmpty(uuid)) matJS.emissiveMap = uuid;
+                }
+            }
+            // Specualar map
+            if (mat.HasProperty("_SpecGlossMap")) {
+                Texture specularMap = mat.GetTexture("_SpecGlossMap");
+                if (specularMap != null) {
+                    string uuid = createTexture(specularMap, mat);
+                    if (!string.IsNullOrEmpty(uuid)) matJS.specularMap = uuid;
                 }
             }
             // Opacity and wireframe
@@ -405,7 +437,6 @@ namespace Export3JS {
         private int[] createFacesWithUV(Mesh mesh, int code = 8) {
             int totalTrianglesCount = mesh.triangles.Length / 3;
             int[] faces = new int[2 * mesh.triangles.Length + totalTrianglesCount];
-            Vector2[] uvs = mesh.uv;
             for (int i = 0; i < totalTrianglesCount; i++) {
                 int vertex = i * 3;
                 int pos = i + vertex * 2;
@@ -426,7 +457,72 @@ namespace Export3JS {
         private int[] createFacesWithMaterialsUV(Mesh mesh, int code = 10) {
             int totalTrianglesCount = mesh.triangles.Length / 3;
             int subMeshCount = mesh.subMeshCount;
-            int[] faces = new int[0];
+            int[] faces = new int[2 * mesh.triangles.Length + 2 * totalTrianglesCount];
+            int shift = 0;
+            for (int subMesh = 0; subMesh < subMeshCount; subMesh++) {
+                int[] subMeshTriangles = mesh.GetTriangles(subMesh);
+                int trianglesCount = subMeshTriangles.Length / 3;
+                for (int i = 0; i < trianglesCount; i++) {
+                    int vertex = i * 3;
+                    int pos = shift + i + vertex + i + vertex;
+                    faces[pos] = code;
+                    faces[pos + 1] = subMeshTriangles[vertex];
+                    faces[pos + 2] = subMeshTriangles[vertex + 1];
+                    faces[pos + 3] = subMeshTriangles[vertex + 2];
+                    faces[pos + 4] = subMesh;
+                    faces[pos + 5] = subMeshTriangles[vertex];
+                    faces[pos + 6] = subMeshTriangles[vertex + 1];
+                    faces[pos + 7] = subMeshTriangles[vertex + 2];
+                }
+                shift += (2 * subMeshTriangles.Length + 2 * trianglesCount);
+            }
+            return faces;
+        }
+
+        // 32, [vertex_index, vertex_index, vertex_index],
+        // [vertex_normal, vertex_normal, vertex_normal]
+        private int[] createFacesWithNormals(Mesh mesh, int code = 32) {
+            int totalTrianglesCount = mesh.triangles.Length / 3;
+            int[] faces = new int[2 * mesh.triangles.Length + totalTrianglesCount];
+            for (int i = 0; i < totalTrianglesCount; i++) {
+                int vertex = i * 3;
+                int pos = i + vertex * 2;
+                faces[pos] = code;
+                faces[pos + 1] = mesh.triangles[vertex];
+                faces[pos + 2] = mesh.triangles[vertex + 1];
+                faces[pos + 3] = mesh.triangles[vertex + 2];
+                faces[pos + 4] = mesh.triangles[vertex];
+                faces[pos + 5] = mesh.triangles[vertex + 1];
+                faces[pos + 6] = mesh.triangles[vertex + 2];
+            }
+            return faces;
+        }
+
+        // 34, [vertex_index, vertex_index, vertex_index],
+        // [material_index],
+        // [vertex_normal, vertex_normal, vertex_normal]
+        private int[] createFacesWithMaterialsNormals(Mesh mesh, int code = 34) {
+            int totalTrianglesCount = mesh.triangles.Length / 3;
+            int subMeshCount = mesh.subMeshCount;
+            int[] faces = new int[2 * mesh.triangles.Length + 2 * totalTrianglesCount];
+            int shift = 0;
+            for (int subMesh = 0; subMesh < subMeshCount; subMesh++) {
+                int[] subMeshTriangles = mesh.GetTriangles(subMesh);
+                int trianglesCount = subMeshTriangles.Length / 3;
+                for (int i = 0; i < trianglesCount; i++) {
+                    int vertex = i * 3;
+                    int pos = shift + i + vertex + i + vertex;
+                    faces[pos] = code;
+                    faces[pos + 1] = subMeshTriangles[vertex];
+                    faces[pos + 2] = subMeshTriangles[vertex + 1];
+                    faces[pos + 3] = subMeshTriangles[vertex + 2];
+                    faces[pos + 4] = subMesh;
+                    faces[pos + 5] = subMeshTriangles[vertex];
+                    faces[pos + 6] = subMeshTriangles[vertex + 1];
+                    faces[pos + 7] = subMeshTriangles[vertex + 2];
+                }
+                shift += (2 * subMeshTriangles.Length + 2 * trianglesCount);
+            }
             return faces;
         }
 
@@ -436,8 +532,6 @@ namespace Export3JS {
         private int[] createFacesWithUVNormals(Mesh mesh, int code = 40) {
             int totalTrianglesCount = mesh.triangles.Length / 3;
             int[] faces = new int[3 * mesh.triangles.Length + totalTrianglesCount];
-            Vector2[] uvs = mesh.uv;
-            Vector3[] normals = mesh.normals;
             for (int i = 0; i < totalTrianglesCount; i++) {
                 int vertex = i * 3;
                 int pos = i + vertex * 3;
@@ -455,16 +549,6 @@ namespace Export3JS {
             return faces;
         }
 
-        // 34, [vertex_index, vertex_index, vertex_index],
-        // [material_index],
-        // [vertex_normal, vertex_normal, vertex_normal]
-        private int[] createFacesWithMaterialsNormals(Mesh mesh, int code = 34) {
-            int totalTrianglesCount = mesh.triangles.Length / 3;
-            int subMeshCount = mesh.subMeshCount;
-            int[] faces = new int[0];
-            return faces;
-        }
-
         // 42, [vertex_index, vertex_index, vertex_index],
         // [material_index],
         // [vertex_uv, vertex_uv, vertex_uv],
@@ -472,7 +556,28 @@ namespace Export3JS {
         private int[] createFacesWithMaterialsUVNormals(Mesh mesh, int code = 42) {
             int totalTrianglesCount = mesh.triangles.Length / 3;
             int subMeshCount = mesh.subMeshCount;
-            int[] faces = new int[0];
+            int[] faces = new int[3 * mesh.triangles.Length + 2 * totalTrianglesCount];
+            int shift = 0;
+            for (int subMesh = 0; subMesh < subMeshCount; subMesh++) {
+                int[] subMeshTriangles = mesh.GetTriangles(subMesh);
+                int trianglesCount = subMeshTriangles.Length / 3;
+                for (int i = 0; i < trianglesCount; i++) {
+                    int vertex = i * 3;
+                    int pos = shift + i + vertex + i + vertex;
+                    faces[pos] = code;
+                    faces[pos + 1] = subMeshTriangles[vertex];
+                    faces[pos + 2] = subMeshTriangles[vertex + 1];
+                    faces[pos + 3] = subMeshTriangles[vertex + 2];
+                    faces[pos + 4] = subMesh;
+                    faces[pos + 5] = subMeshTriangles[vertex];
+                    faces[pos + 6] = subMeshTriangles[vertex + 1];
+                    faces[pos + 7] = subMeshTriangles[vertex + 2];
+                    faces[pos + 8] = subMeshTriangles[vertex];
+                    faces[pos + 7] = subMeshTriangles[vertex + 1];
+                    faces[pos + 9] = subMeshTriangles[vertex + 2];
+                }
+                shift += (3 * subMeshTriangles.Length + 2 * trianglesCount);
+            }
             return faces;
         }
     }

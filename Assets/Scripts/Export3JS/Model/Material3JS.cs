@@ -28,7 +28,7 @@ namespace Export3JS.Model {
     public class MeshBasicMaterial3JS : Material3JS {
 
         public string map;
-        public int color; // Material.color
+        public int color; // _Color
 
         public MeshBasicMaterial3JS() : base() {
             type = MaterialType.MeshBasicMaterial;
@@ -37,12 +37,15 @@ namespace Export3JS.Model {
 
     public class MeshPhongMaterial3JS : Material3JS {
 
-        public string map;
-        public int color; // Material.color
-        public int ambient; // _AmbientColor
-        public int emissive; // _EmissionColor
+        public string map; // _MainTex 
+        public string normalMap; // _BumpMap
+        public string emissiveMap; // _EmissionMap
+        public string specularMap; // _SpecGlossMap
+        public int color; // _Color
         public int specular; // _SpecColor
         public float shininess; // _Shininess
+        public int emissive; // _EmissionColor
+        public float emissiveIntensity; // _Emission
 
         public MeshPhongMaterial3JS() : base() {
             type = MaterialType.MeshPhongMaterial;

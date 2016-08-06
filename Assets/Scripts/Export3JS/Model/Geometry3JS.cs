@@ -23,6 +23,10 @@ namespace Export3JS.Model {
         public string version;
         public string type;
         public string generator;
+        public int vertices;
+        public int normals;
+        public int uvs;
+        public int faces;
 
         public Geometry3JSMeta() {
             version = "4.0";
