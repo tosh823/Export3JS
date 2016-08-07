@@ -18,11 +18,14 @@ namespace Export3JS {
         public static float[] getMatrixAsArray(Matrix4x4 input) {
             // ThreeJS parses in column-major format
             float[] output = new float[16];
-            for (int column = 0; column < 4; column++) {
-                for (int row = 0; row < 4; row++) {
-                    output[column * 4 + row] = input[row, column];
+            for (int row = 0; row < 4; row++) {
+                for (int column = 0; column < 4; column++) {
+                    output[row + column * 4] = input[row + column * 4];
                 }   
             }
+            // ThreeJS uses right-handed coordinate system
+            // Thus inverting z coordinate
+            output[14] = -1 * output[14];
             return output;
         }
 
