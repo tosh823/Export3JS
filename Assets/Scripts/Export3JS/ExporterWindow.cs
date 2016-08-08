@@ -22,9 +22,9 @@ namespace Export3JS {
             GUILayout.BeginVertical();
             GUILayout.Label("Three.JS Exporter", EditorStyles.boldLabel);
             if (GUILayout.Button("Export", GUILayout.ExpandWidth(false))) {
-                //string dir = EditorUtility.OpenFolderPanel("Choose destination folder", "", "");
+                string dir = EditorUtility.OpenFolderPanel("Choose destination folder", "", "");
                 //Debug.Log("Export pressed " + dir);
-                Exporter exporter = new Exporter(Constants.TEST_PATH);
+                Exporter exporter = new Exporter(dir + "/");
                 exporter.Export();
             }
             GUILayout.EndVertical();

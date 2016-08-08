@@ -346,6 +346,16 @@ namespace Export3JS {
                 if (Utils.dictContainsValue(out uuid, materials, mat)) {
                     // If we already had the same material, find it
                     Material3JS existingMatJS = content.materials.Find(x => (x.uuid.Equals(uuid)));
+                    if (existingMatJS == null) {
+                        // If we didn't find the material, it has to be somewhere in multimaterials children
+                        // Let's loop through them to get the desired
+                        foreach (Material3JS material in content.materials) {
+                            if (material is MultiMaterial3JS) {
+                                existingMatJS = (material as MultiMaterial3JS).materials.Find(x => (x.uuid.Equals(uuid)));
+                                if (existingMatJS != null) break;
+                            }
+                        }
+                    }
                     multiMatJS.materials.Add(existingMatJS);
                 }
                 else {
