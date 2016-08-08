@@ -24,7 +24,11 @@ namespace Export3JS {
                 }   
             }
             // ThreeJS uses right-handed coordinate system
-            // Thus inverting z coordinate
+            // Thus iinverting some values
+            output[2] = -1 * output[2];
+            output[6] = -1 * output[6];
+            output[8] = -1 * output[8];
+            output[9] = -1 * output[9];
             output[14] = -1 * output[14];
             return output;
         }

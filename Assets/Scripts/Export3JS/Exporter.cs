@@ -8,16 +8,24 @@ using Export3JS.Model;
 
 namespace Export3JS {
 
+    public struct ExporterOptions {
+        public string dir;
+        public bool exportCameras;
+        public bool exportLights;
+        public bool exportMeshes;
+        public bool exportDisabled;
+    }
+
     public class Exporter {
 
-        private string dir;
+        private ExporterOptions options;
         private Format4 content;
         private Dictionary<string, Material> materials;
         private Dictionary<string, Material[]> multiMaterials;
         private Dictionary<string, Mesh> geometries;
 
-        public Exporter(string dir) {
-            this.dir = dir;
+        public Exporter(ExporterOptions options) {
+            this.options = options;
             materials = new Dictionary<string, Material>();
             multiMaterials = new Dictionary<string, Material[]>();
             geometries = new Dictionary<string, Mesh>();
@@ -27,7 +35,7 @@ namespace Export3JS {
             parseScene();
             string json = JsonConvert.SerializeObject(content, Formatting.Indented);
             string filename = SceneManager.GetActiveScene().name + ".json";
-            System.IO.File.WriteAllText(dir + filename, json);
+            System.IO.File.WriteAllText(options.dir + filename, json);
             Debug.Log("Three.JS Exporter completed, " + DateTime.Now.ToLongTimeString());
         }
 
@@ -46,33 +54,43 @@ namespace Export3JS {
         }
 
         private Object3JS parseGameObject(GameObject gameObject) {
-            Object3JS obj;
-            if (!gameObject.activeInHierarchy) {
-                obj = null;
+            if (gameObject.activeInHierarchy || options.exportDisabled) {
+                Object3JS obj;
+                if (gameObject.GetComponent<Renderer>() && options.exportMeshes) {
+                    obj = createMesh(gameObject);
+                }
+                else if (gameObject.GetComponent<Light>() && options.exportLights) {
+                    obj = createLight(gameObject);
+                }
+                else if (gameObject.GetComponent<Camera>() && options.exportCameras) {
+                    obj = createCamera(gameObject);
+                }
+                else {
+                    obj = createGroup(gameObject);
+                }
+                return obj;
             }
-            else if (gameObject.GetComponent<Renderer>()) {
-                obj = createMesh(gameObject);
-            }
-            else if (gameObject.GetComponent<Light>()) {
-                obj = createLight(gameObject);
-            }
-            else if (gameObject.GetComponent<Camera>()) {
-                obj = createCamera(gameObject);
-            }
-            else {
-                obj = createGroup(gameObject);
-            }
-            return obj;
+            else return null;
         }
 
         private Object3JSMesh createMesh(GameObject gameObject) {
             Object3JSMesh mesh = new Object3JSMesh();
             mesh.name = gameObject.name;
-            mesh.matrix = Utils.getMatrixAsArray(gameObject.transform.localToWorldMatrix);
+            //mesh.matrix = Utils.getMatrixAsArray(gameObject.transform.localToWorldMatrix);
+            // Space
+            mesh.position = getPosition(gameObject);
+            mesh.rotation = getRotation(gameObject);
+            mesh.quaternion = getQuartenion(gameObject);
+            mesh.scale = getScale(gameObject);
+
             if (gameObject.GetComponent<Renderer>() != null) {
-                mesh.material = parseMaterials(gameObject);
+                string uuid = parseMaterials(gameObject);
+                if (!string.IsNullOrEmpty(uuid)) mesh.material = uuid;
             }
-            if (gameObject.GetComponent<MeshFilter>() != null) mesh.geometry = parseGeometries(gameObject);
+            if (gameObject.GetComponent<MeshFilter>() != null) {
+                string uuid = parseGeometries(gameObject);
+                if (!string.IsNullOrEmpty(uuid)) mesh.geometry = uuid;
+            }
             // Parse children
             if (gameObject.transform.childCount > 0) {
                 foreach (Transform child in gameObject.transform) {
@@ -87,7 +105,13 @@ namespace Export3JS {
             Object3JSLight light = new Object3JSLight();
             Light lightComponent = gameObject.GetComponent<Light>();
             light.name = gameObject.name;
-            light.matrix = Utils.getMatrixAsArray(gameObject.transform.localToWorldMatrix);
+            //light.matrix = Utils.getMatrixAsArray(gameObject.transform.localToWorldMatrix);
+            // Space
+            light.position = getPosition(gameObject);
+            light.rotation = getRotation(gameObject);
+            light.quaternion = getQuartenion(gameObject);
+            light.scale = getScale(gameObject);
+
             light.color = Utils.getIntColor(lightComponent.color);
             light.intensity = lightComponent.intensity;
             // Parse children
@@ -103,7 +127,13 @@ namespace Export3JS {
         private Object3JSGroup createGroup(GameObject gameObject) {
             Object3JSGroup group = new Object3JSGroup();
             group.name = gameObject.name;
-            group.matrix = Utils.getMatrixAsArray(gameObject.transform.localToWorldMatrix);
+            //group.matrix = Utils.getMatrixAsArray(gameObject.transform.localToWorldMatrix);
+            // Space
+            group.position = getPosition(gameObject);
+            group.rotation = getRotation(gameObject);
+            group.quaternion = getQuartenion(gameObject);
+            group.scale = getScale(gameObject);
+
             // Parse children
             if (gameObject.transform.childCount > 0) {
                 foreach (Transform child in gameObject.transform) {
@@ -118,7 +148,13 @@ namespace Export3JS {
             Object3JSCamera camera = new Object3JSCamera();
             Camera cameraComponent = gameObject.GetComponent<Camera>();
             camera.name = gameObject.name;
-            camera.matrix = Utils.getMatrixAsArray(gameObject.transform.localToWorldMatrix);
+            //camera.matrix = Utils.getMatrixAsArray(gameObject.transform.localToWorldMatrix);
+            // Space
+            camera.position = getPosition(gameObject);
+            camera.rotation = getRotation(gameObject);
+            camera.quaternion = getQuartenion(gameObject);
+            camera.scale = getScale(gameObject);
+
             camera.fov = cameraComponent.fieldOfView;
             camera.aspect = cameraComponent.aspect;
             camera.near = cameraComponent.nearClipPlane;
@@ -381,7 +417,7 @@ namespace Export3JS {
             Image3JS jsImg = new Image3JS();
             // Copying the texture file
             string relativePath = AssetDatabase.GetAssetPath(tex);
-            string url = Utils.copyTexture(relativePath, dir);
+            string url = Utils.copyTexture(relativePath, options.dir);
             if (!string.IsNullOrEmpty(url)) {
                 jsImg.url = url;
                 jsText.image = jsImg.uuid;
@@ -589,6 +625,48 @@ namespace Export3JS {
                 shift += (3 * subMeshTriangles.Length + 2 * trianglesCount);
             }
             return faces;
+        }
+
+        private float[] getPosition(GameObject gameObject) {
+            Vector3 unityPosition = gameObject.transform.localPosition;
+            float[] position = new float[3] {
+                unityPosition.x,
+                unityPosition.y,
+                unityPosition.z
+            };
+            return position;
+        }
+
+        private float[] getRotation(GameObject gameObject) {
+            float rad = Mathf.PI / 180;
+            Vector3 unityRotation = gameObject.transform.localRotation.eulerAngles;
+            float[] rotation = new float[3] {
+                (unityRotation.x + 180) * rad,
+                (unityRotation.y + 180) * rad,
+                (unityRotation.z + 180) * rad
+            };
+            return rotation;
+        }
+
+        private float[] getQuartenion(GameObject gameObject) {
+            Quaternion unityQuartenion = gameObject.transform.localRotation;
+            float[] quartenion = new float[4] {
+                unityQuartenion.x,
+                unityQuartenion.y,
+                unityQuartenion.z,
+                unityQuartenion.w
+            };
+            return quartenion;
+        }
+
+        private float[] getScale(GameObject gameObject) {
+            Vector3 unityScale = gameObject.transform.localScale;
+            float[] scale = new float[3] {
+                unityScale.x,
+                unityScale.y,
+                unityScale.z
+            };
+            return scale;
         }
     }
 }
