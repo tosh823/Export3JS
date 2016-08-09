@@ -9,12 +9,19 @@ namespace Export3JS.Model {
         public static string MultiMaterial = "MultiMaterial";
     }
 
+    public struct MaterialSide {
+        public static int FrontSide = 0;
+        public static int BackSide = 1;
+        public static int DoubleSide = 2;
+    }
+
     public class Material3JS {
 
         public string uuid;
         public string name;
         public string type;
-        
+
+        public int side;
         public float opacity; // Material.color.a
         public bool transparent; // ?
         public bool wireframe; // ? false
@@ -22,6 +29,7 @@ namespace Export3JS.Model {
         public Material3JS() {
             uuid = System.Guid.NewGuid().ToString().ToUpper();
             type = MaterialType.MeshPhongMaterial;
+            side = MaterialSide.BackSide;
         }
     }
 

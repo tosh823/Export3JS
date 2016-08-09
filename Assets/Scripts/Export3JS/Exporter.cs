@@ -44,6 +44,7 @@ namespace Export3JS {
             // Create base scene
             Object3JSScene scene = new Object3JSScene();
             scene.name = SceneManager.GetActiveScene().name;
+            scene.matrix = Utils.getMatrixAsArray(Matrix4x4.identity);
             content.@object = scene;
             // Enumerate through all the objects
             GameObject[] rootObjects = SceneManager.GetActiveScene().GetRootGameObjects();
@@ -76,7 +77,7 @@ namespace Export3JS {
         private Object3JSMesh createMesh(GameObject gameObject) {
             Object3JSMesh mesh = new Object3JSMesh();
             mesh.name = gameObject.name;
-            //mesh.matrix = Utils.getMatrixAsArray(gameObject.transform.localToWorldMatrix);
+            mesh.matrix = getMatrix(gameObject);
             // Space
             mesh.position = getPosition(gameObject);
             mesh.rotation = getRotation(gameObject);
@@ -105,7 +106,7 @@ namespace Export3JS {
             Object3JSLight light = new Object3JSLight();
             Light lightComponent = gameObject.GetComponent<Light>();
             light.name = gameObject.name;
-            //light.matrix = Utils.getMatrixAsArray(gameObject.transform.localToWorldMatrix);
+            light.matrix = getMatrix(gameObject);
             // Space
             light.position = getPosition(gameObject);
             light.rotation = getRotation(gameObject);
@@ -127,7 +128,7 @@ namespace Export3JS {
         private Object3JSGroup createGroup(GameObject gameObject) {
             Object3JSGroup group = new Object3JSGroup();
             group.name = gameObject.name;
-            //group.matrix = Utils.getMatrixAsArray(gameObject.transform.localToWorldMatrix);
+            group.matrix = getMatrix(gameObject);
             // Space
             group.position = getPosition(gameObject);
             group.rotation = getRotation(gameObject);
@@ -148,7 +149,7 @@ namespace Export3JS {
             Object3JSCamera camera = new Object3JSCamera();
             Camera cameraComponent = gameObject.GetComponent<Camera>();
             camera.name = gameObject.name;
-            //camera.matrix = Utils.getMatrixAsArray(gameObject.transform.localToWorldMatrix);
+            camera.matrix = getMatrix(gameObject);
             // Space
             camera.position = getPosition(gameObject);
             camera.rotation = getRotation(gameObject);
@@ -627,23 +628,44 @@ namespace Export3JS {
             return faces;
         }
 
+        private float[] getMatrix(GameObject gameObject) {
+            Vector3 unityPosition = gameObject.transform.localPosition;
+            Quaternion unityQuartenion = gameObject.transform.localRotation;
+            // Magic
+            /*Vector3 axis = Vector3.zero;
+            float angle = 0f;
+            unityQuartenion.ToAngleAxis(out angle, out axis);
+            axis.z *= -1;
+            unityQuartenion = Quaternion.AngleAxis(angle, axis);*/
+            // ------
+            Vector3 unityRotation = gameObject.transform.localEulerAngles;
+            Vector3 unityScale = gameObject.transform.lossyScale;
+            Matrix4x4 unityMatrix = Matrix4x4.TRS(unityPosition, unityQuartenion, unityScale);
+            /*Debug.Log(gameObject.name + " position " + unityPosition);
+            Debug.Log(gameObject.name + " quaternion " + unityQuartenion);
+            Debug.Log(gameObject.name + " rotation " + unityRotation);
+            Debug.Log(gameObject.name + " scale " + unityScale);
+            Debug.Log(gameObject.name + " matrix " + unityMatrix);*/
+            return Utils.getMatrixAsArray(unityMatrix);
+        }
+
         private float[] getPosition(GameObject gameObject) {
             Vector3 unityPosition = gameObject.transform.localPosition;
             float[] position = new float[3] {
                 unityPosition.x,
                 unityPosition.y,
-                unityPosition.z
+                (-1) * unityPosition.z
             };
             return position;
         }
 
         private float[] getRotation(GameObject gameObject) {
             float rad = Mathf.PI / 180;
-            Vector3 unityRotation = gameObject.transform.localRotation.eulerAngles;
+            Vector3 unityRotation = gameObject.transform.eulerAngles;
             float[] rotation = new float[3] {
-                (unityRotation.x + 180) * rad,
-                (unityRotation.y + 180) * rad,
-                (unityRotation.z + 180) * rad
+                unityRotation.x * rad,
+                unityRotation.y * rad,
+                unityRotation.z * rad
             };
             return rotation;
         }
