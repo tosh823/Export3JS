@@ -78,11 +78,6 @@ namespace Export3JS {
             Object3JSMesh mesh = new Object3JSMesh();
             mesh.name = gameObject.name;
             mesh.matrix = getMatrix(gameObject);
-            // Space
-            mesh.position = getPosition(gameObject);
-            mesh.rotation = getRotation(gameObject);
-            mesh.quaternion = getQuartenion(gameObject);
-            mesh.scale = getScale(gameObject);
 
             if (gameObject.GetComponent<Renderer>() != null) {
                 string uuid = parseMaterials(gameObject);
@@ -107,11 +102,6 @@ namespace Export3JS {
             Light lightComponent = gameObject.GetComponent<Light>();
             light.name = gameObject.name;
             light.matrix = getMatrix(gameObject);
-            // Space
-            light.position = getPosition(gameObject);
-            light.rotation = getRotation(gameObject);
-            light.quaternion = getQuartenion(gameObject);
-            light.scale = getScale(gameObject);
 
             light.color = Utils.getIntColor(lightComponent.color);
             light.intensity = lightComponent.intensity;
@@ -129,11 +119,6 @@ namespace Export3JS {
             Object3JSGroup group = new Object3JSGroup();
             group.name = gameObject.name;
             group.matrix = getMatrix(gameObject);
-            // Space
-            group.position = getPosition(gameObject);
-            group.rotation = getRotation(gameObject);
-            group.quaternion = getQuartenion(gameObject);
-            group.scale = getScale(gameObject);
 
             // Parse children
             if (gameObject.transform.childCount > 0) {
@@ -150,11 +135,6 @@ namespace Export3JS {
             Camera cameraComponent = gameObject.GetComponent<Camera>();
             camera.name = gameObject.name;
             camera.matrix = getMatrix(gameObject);
-            // Space
-            camera.position = getPosition(gameObject);
-            camera.rotation = getRotation(gameObject);
-            camera.quaternion = getQuartenion(gameObject);
-            camera.scale = getScale(gameObject);
 
             camera.fov = cameraComponent.fieldOfView;
             camera.aspect = cameraComponent.aspect;
@@ -202,9 +182,10 @@ namespace Export3JS {
             Vector3[] vertices = mesh.vertices;
             for (int i = 0; i < mesh.vertexCount; i++) {
                 Vector3 vertex = vertices[i];
+                // (-1) * 
                 geometry.data.vertices[i * 3] = vertex.x;
                 geometry.data.vertices[i * 3 + 1] = vertex.y;
-                geometry.data.vertices[i * 3 + 2] = vertex.z;
+                geometry.data.vertices[i * 3 + 2] = (-1) * vertex.z;
             }
             // Normals
             geometry.data.normals = new float[mesh.normals.Length * 3];
@@ -212,9 +193,11 @@ namespace Export3JS {
             if (normals.Length > 0) code = code | FaceMask.VERTEX_NORMAL;
             for (int i = 0; i < normals.Length; i++) {
                 Vector3 normal = normals[i];
+                normal.Normalize();
+                // (-1) * 
                 geometry.data.normals[i * 3] = normal.x;
                 geometry.data.normals[i * 3 + 1] = normal.y;
-                geometry.data.normals[i * 3 + 2] = normal.z;
+                geometry.data.normals[i * 3 + 2] = (-1) * normal.z;
             }
             // UV
             geometry.data.uvs = new float[1, mesh.uv.Length * 2];
@@ -449,8 +432,8 @@ namespace Export3JS {
                 int pos = i + vertex;
                 faces[pos] = code;
                 faces[pos + 1] = mesh.triangles[vertex];
-                faces[pos + 2] = mesh.triangles[vertex + 1];
-                faces[pos + 3] = mesh.triangles[vertex + 2];
+                faces[pos + 2] = mesh.triangles[vertex + 2];
+                faces[pos + 3] = mesh.triangles[vertex + 1];
             }
             return faces;
         }
@@ -470,8 +453,8 @@ namespace Export3JS {
                     int pos = shift + i + vertex + i;
                     faces[pos] = code;
                     faces[pos + 1] = subMeshTriangles[vertex];
-                    faces[pos + 2] = subMeshTriangles[vertex + 1];
-                    faces[pos + 3] = subMeshTriangles[vertex + 2];
+                    faces[pos + 2] = subMeshTriangles[vertex + 2];
+                    faces[pos + 3] = subMeshTriangles[vertex + 1];
                     faces[pos + 4] = subMesh;
                 }
                 shift += (subMeshTriangles.Length + 2 * trianglesCount);
@@ -489,11 +472,11 @@ namespace Export3JS {
                 int pos = i + vertex * 2;
                 faces[pos] = code;
                 faces[pos + 1] = mesh.triangles[vertex];
-                faces[pos + 2] = mesh.triangles[vertex + 1];
-                faces[pos + 3] = mesh.triangles[vertex + 2];
+                faces[pos + 2] = mesh.triangles[vertex + 2];
+                faces[pos + 3] = mesh.triangles[vertex + 1];
                 faces[pos + 4] = mesh.triangles[vertex];
-                faces[pos + 5] = mesh.triangles[vertex + 1];
-                faces[pos + 6] = mesh.triangles[vertex + 2];
+                faces[pos + 5] = mesh.triangles[vertex + 2];
+                faces[pos + 6] = mesh.triangles[vertex + 1];
             }
             return faces;
         }
@@ -514,12 +497,12 @@ namespace Export3JS {
                     int pos = shift + i + vertex + i + vertex;
                     faces[pos] = code;
                     faces[pos + 1] = subMeshTriangles[vertex];
-                    faces[pos + 2] = subMeshTriangles[vertex + 1];
-                    faces[pos + 3] = subMeshTriangles[vertex + 2];
+                    faces[pos + 2] = subMeshTriangles[vertex + 2];
+                    faces[pos + 3] = subMeshTriangles[vertex + 1];
                     faces[pos + 4] = subMesh;
                     faces[pos + 5] = subMeshTriangles[vertex];
-                    faces[pos + 6] = subMeshTriangles[vertex + 1];
-                    faces[pos + 7] = subMeshTriangles[vertex + 2];
+                    faces[pos + 6] = subMeshTriangles[vertex + 2];
+                    faces[pos + 7] = subMeshTriangles[vertex + 1];
                 }
                 shift += (2 * subMeshTriangles.Length + 2 * trianglesCount);
             }
@@ -536,8 +519,8 @@ namespace Export3JS {
                 int pos = i + vertex * 2;
                 faces[pos] = code;
                 faces[pos + 1] = mesh.triangles[vertex];
-                faces[pos + 2] = mesh.triangles[vertex + 1];
-                faces[pos + 3] = mesh.triangles[vertex + 2];
+                faces[pos + 2] = mesh.triangles[vertex + 2];
+                faces[pos + 3] = mesh.triangles[vertex + 1];
                 faces[pos + 4] = mesh.triangles[vertex];
                 faces[pos + 5] = mesh.triangles[vertex + 1];
                 faces[pos + 6] = mesh.triangles[vertex + 2];
@@ -561,8 +544,8 @@ namespace Export3JS {
                     int pos = shift + i + vertex + i + vertex;
                     faces[pos] = code;
                     faces[pos + 1] = subMeshTriangles[vertex];
-                    faces[pos + 2] = subMeshTriangles[vertex + 1];
-                    faces[pos + 3] = subMeshTriangles[vertex + 2];
+                    faces[pos + 2] = subMeshTriangles[vertex + 2];
+                    faces[pos + 3] = subMeshTriangles[vertex + 1];
                     faces[pos + 4] = subMesh;
                     faces[pos + 5] = subMeshTriangles[vertex];
                     faces[pos + 6] = subMeshTriangles[vertex + 1];
@@ -584,11 +567,11 @@ namespace Export3JS {
                 int pos = i + vertex * 3;
                 faces[pos] = code;
                 faces[pos + 1] = mesh.triangles[vertex];
-                faces[pos + 2] = mesh.triangles[vertex + 1];
-                faces[pos + 3] = mesh.triangles[vertex + 2];
+                faces[pos + 2] = mesh.triangles[vertex + 2];
+                faces[pos + 3] = mesh.triangles[vertex + 1];
                 faces[pos + 4] = mesh.triangles[vertex];
-                faces[pos + 5] = mesh.triangles[vertex + 1];
-                faces[pos + 6] = mesh.triangles[vertex + 2];
+                faces[pos + 5] = mesh.triangles[vertex + 2];
+                faces[pos + 6] = mesh.triangles[vertex + 1];
                 faces[pos + 7] = mesh.triangles[vertex];
                 faces[pos + 8] = mesh.triangles[vertex + 1];
                 faces[pos + 9] = mesh.triangles[vertex + 2];
@@ -613,15 +596,15 @@ namespace Export3JS {
                     int pos = shift + i + vertex + i + vertex;
                     faces[pos] = code;
                     faces[pos + 1] = subMeshTriangles[vertex];
-                    faces[pos + 2] = subMeshTriangles[vertex + 1];
-                    faces[pos + 3] = subMeshTriangles[vertex + 2];
+                    faces[pos + 2] = subMeshTriangles[vertex + 2];
+                    faces[pos + 3] = subMeshTriangles[vertex + 1];
                     faces[pos + 4] = subMesh;
                     faces[pos + 5] = subMeshTriangles[vertex];
-                    faces[pos + 6] = subMeshTriangles[vertex + 1];
-                    faces[pos + 7] = subMeshTriangles[vertex + 2];
-                    faces[pos + 8] = subMeshTriangles[vertex];
+                    faces[pos + 6] = subMeshTriangles[vertex + 2];
                     faces[pos + 7] = subMeshTriangles[vertex + 1];
-                    faces[pos + 9] = subMeshTriangles[vertex + 2];
+                    faces[pos + 8] = subMeshTriangles[vertex];
+                    faces[pos + 7] = subMeshTriangles[vertex + 2];
+                    faces[pos + 9] = subMeshTriangles[vertex + 1];
                 }
                 shift += (3 * subMeshTriangles.Length + 2 * trianglesCount);
             }
@@ -631,64 +614,9 @@ namespace Export3JS {
         private float[] getMatrix(GameObject gameObject) {
             Vector3 unityPosition = gameObject.transform.localPosition;
             Quaternion unityQuartenion = gameObject.transform.localRotation;
-            // Magic
-            /*Vector3 axis = Vector3.zero;
-            float angle = 0f;
-            unityQuartenion.ToAngleAxis(out angle, out axis);
-            axis.z *= -1;
-            unityQuartenion = Quaternion.AngleAxis(angle, axis);*/
-            // ------
-            Vector3 unityRotation = gameObject.transform.localEulerAngles;
             Vector3 unityScale = gameObject.transform.lossyScale;
             Matrix4x4 unityMatrix = Matrix4x4.TRS(unityPosition, unityQuartenion, unityScale);
-            /*Debug.Log(gameObject.name + " position " + unityPosition);
-            Debug.Log(gameObject.name + " quaternion " + unityQuartenion);
-            Debug.Log(gameObject.name + " rotation " + unityRotation);
-            Debug.Log(gameObject.name + " scale " + unityScale);
-            Debug.Log(gameObject.name + " matrix " + unityMatrix);*/
             return Utils.getMatrixAsArray(unityMatrix);
-        }
-
-        private float[] getPosition(GameObject gameObject) {
-            Vector3 unityPosition = gameObject.transform.localPosition;
-            float[] position = new float[3] {
-                unityPosition.x,
-                unityPosition.y,
-                (-1) * unityPosition.z
-            };
-            return position;
-        }
-
-        private float[] getRotation(GameObject gameObject) {
-            float rad = Mathf.PI / 180;
-            Vector3 unityRotation = gameObject.transform.eulerAngles;
-            float[] rotation = new float[3] {
-                unityRotation.x * rad,
-                unityRotation.y * rad,
-                unityRotation.z * rad
-            };
-            return rotation;
-        }
-
-        private float[] getQuartenion(GameObject gameObject) {
-            Quaternion unityQuartenion = gameObject.transform.localRotation;
-            float[] quartenion = new float[4] {
-                unityQuartenion.x,
-                unityQuartenion.y,
-                unityQuartenion.z,
-                unityQuartenion.w
-            };
-            return quartenion;
-        }
-
-        private float[] getScale(GameObject gameObject) {
-            Vector3 unityScale = gameObject.transform.localScale;
-            float[] scale = new float[3] {
-                unityScale.x,
-                unityScale.y,
-                unityScale.z
-            };
-            return scale;
         }
     }
 }
