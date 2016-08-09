@@ -29,7 +29,7 @@ namespace Export3JS.Model {
         public Material3JS() {
             uuid = System.Guid.NewGuid().ToString().ToUpper();
             type = MaterialType.MeshPhongMaterial;
-            side = MaterialSide.BackSide;
+            side = MaterialSide.FrontSide;
         }
     }
 

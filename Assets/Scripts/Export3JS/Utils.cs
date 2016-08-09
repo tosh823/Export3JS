@@ -18,7 +18,8 @@ namespace Export3JS {
         public static float[] getMatrixAsArray(Matrix4x4 input) {
             // ThreeJS parses in column-major format
             Matrix4x4 matrix = input;
-            //Matrix4x4 matrix = input * Matrix4x4.Scale(new Vector3(1, 1, -1));
+            // Flip by Z axis
+            //matrix = matrix * Matrix4x4.Scale(new Vector3(1, 1, -1));
             float[] output = new float[16];
             for (int row = 0; row < 4; row++) {
                 for (int column = 0; column < 4; column++) {
@@ -26,11 +27,15 @@ namespace Export3JS {
                 }   
             }
             // ThreeJS uses right-handed coordinate system, apply invertion
-            output[2] = -1 * output[2];
+            /*output[2] = -1 * output[2];
             output[6] = -1 * output[6];
             output[8] = -1 * output[8];
             output[9] = -1 * output[9];
-            output[14] = -1 * output[14];
+            output[14] = -1 * output[14];*/
+
+            // Flip Z
+            //output[10] = -1 * output[10];
+
             return output;
         }
 
