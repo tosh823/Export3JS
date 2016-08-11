@@ -14,11 +14,14 @@ namespace Export3JS {
         public bool exportLights;
         public bool exportMeshes;
         public bool exportDisabled;
+        public bool castShadows;
     }
 
     public class Exporter {
 
         private ExporterOptions options;
+        private int objectTotal;
+        private int objectsParsed;
         private Format4 content;
         private Dictionary<string, Material> materials;
         private Dictionary<string, Material[]> multiMaterials;
@@ -32,19 +35,48 @@ namespace Export3JS {
         }
 
         public void Export() {
+            objectTotal = UnityEngine.Object.FindObjectsOfType<GameObject>().Length;
+            objectsParsed = 0;
             parseScene();
             string json = JsonConvert.SerializeObject(content, Formatting.Indented);
             string filename = SceneManager.GetActiveScene().name + ".json";
             System.IO.File.WriteAllText(options.dir + filename, json);
             Debug.Log("Three.JS Exporter completed, " + DateTime.Now.ToLongTimeString());
+            ExporterWindow.ClearProgress();
+        }
+
+        private void updateProgress() {
+            objectsParsed++;
+            float value = objectsParsed / (float)objectTotal;
+            ExporterWindow.ReportProgress(value);
         }
 
         private void parseScene() {
             content = new Format4();
             // Create base scene
-            Object3JSScene scene = new Object3JSScene();
+            Scene3JS scene = new Scene3JS();
             scene.name = SceneManager.GetActiveScene().name;
             scene.matrix = Utils.getMatrixAsArray(Matrix4x4.identity);
+            // Checking if we have fog
+            if (RenderSettings.fog) {
+                Fog3JS fog = new Fog3JS();
+                fog.color = Utils.getIntColor(RenderSettings.fogColor);
+                switch (RenderSettings.fogMode) {
+                    case FogMode.Linear:
+                        LinearFog3JS linearFog = new LinearFog3JS(fog);
+                        linearFog.near = RenderSettings.fogStartDistance;
+                        linearFog.far = RenderSettings.fogEndDistance;
+                        scene.fog = linearFog;
+                        break;
+                    case FogMode.Exponential:
+                    case FogMode.ExponentialSquared:
+                        ExpFog3JS expFog = new ExpFog3JS(fog);
+                        expFog.density = RenderSettings.fogDensity;
+                        scene.fog = expFog;
+                        break;
+                } 
+            }
+            scene.children.Add(createAmbientLight());
             content.@object = scene;
             // Enumerate through all the objects
             GameObject[] rootObjects = SceneManager.GetActiveScene().GetRootGameObjects();
@@ -69,19 +101,27 @@ namespace Export3JS {
                 else {
                     obj = createGroup(gameObject);
                 }
+                updateProgress();
                 return obj;
             }
-            else return null;
+            else {
+                updateProgress();
+                return null;
+            }
         }
 
-        private Object3JSMesh createMesh(GameObject gameObject) {
-            Object3JSMesh mesh = new Object3JSMesh();
+        private Mesh3JS createMesh(GameObject gameObject) {
+            Mesh3JS mesh = new Mesh3JS();
             mesh.name = gameObject.name;
             mesh.matrix = getMatrix(gameObject);
 
             if (gameObject.GetComponent<Renderer>() != null) {
                 string uuid = parseMaterials(gameObject);
-                if (!string.IsNullOrEmpty(uuid)) mesh.material = uuid;
+                if (!string.IsNullOrEmpty(uuid)) {
+                    mesh.material = uuid;
+                    mesh.receiveShadow = gameObject.GetComponent<Renderer>().receiveShadows;
+                    mesh.castShadow = options.castShadows;
+                }
             }
             if (gameObject.GetComponent<MeshFilter>() != null) {
                 string uuid = parseGeometries(gameObject);
@@ -97,14 +137,47 @@ namespace Export3JS {
             return mesh;
         }
 
-        private Object3JSLight createLight(GameObject gameObject) {
-            Object3JSLight light = new Object3JSLight();
+        private AmbientLight3JS createAmbientLight() {
+            AmbientLight3JS ambientLight = new AmbientLight3JS();
+            ambientLight.name = "AmbientLight";
+            ambientLight.matrix = Utils.getMatrixAsArray(Matrix4x4.identity);
+            ambientLight.color = Utils.getIntColor(RenderSettings.ambientLight);
+            ambientLight.intensity = RenderSettings.ambientIntensity / 8.0f;
+            return ambientLight;
+        }
+
+        private Light3JS createLight(GameObject gameObject) {
+            Light3JS light = new Light3JS();
             Light lightComponent = gameObject.GetComponent<Light>();
             light.name = gameObject.name;
             light.matrix = getMatrix(gameObject);
-
             light.color = Utils.getIntColor(lightComponent.color);
-            light.intensity = lightComponent.intensity;
+            light.intensity = lightComponent.intensity / 8.0f;
+
+            // Create light of the type
+            switch (lightComponent.type) {
+                case UnityEngine.LightType.Directional:
+                    light = new DirectionalLight3JS(light);
+                    (light as DirectionalLight3JS).castShadow = ((lightComponent.shadows != LightShadows.None) && options.castShadows);
+                    break;
+                case UnityEngine.LightType.Point:
+                    light = new PointLight3JS(light);
+                    (light as PointLight3JS).distance = lightComponent.range;
+                    (light as PointLight3JS).decay = 2f;
+                    break;
+                case UnityEngine.LightType.Spot:
+                    light = new SpotLight3JS(light);
+                    (light as SpotLight3JS).distance = lightComponent.range;
+                    (light as SpotLight3JS).decay = 2f;
+                    (light as SpotLight3JS).angle = lightComponent.spotAngle * (Mathf.PI / 180);
+                    (light as SpotLight3JS).penumbra = 0.5f;
+                    (light as SpotLight3JS).castShadow = ((lightComponent.shadows != LightShadows.None) && options.castShadows);
+                    break;
+                default:
+                    Debug.Log("Unsupported light type");
+                    break;
+            }
+
             // Parse children
             if (gameObject.transform.childCount > 0) {
                 foreach (Transform child in gameObject.transform) {
@@ -115,8 +188,8 @@ namespace Export3JS {
             return light;
         }
 
-        private Object3JSGroup createGroup(GameObject gameObject) {
-            Object3JSGroup group = new Object3JSGroup();
+        private Group3JS createGroup(GameObject gameObject) {
+            Group3JS group = new Group3JS();
             group.name = gameObject.name;
             group.matrix = getMatrix(gameObject);
 
@@ -130,16 +203,29 @@ namespace Export3JS {
             return group;
         }
 
-        private Object3JSCamera createCamera(GameObject gameObject) {
-            Object3JSCamera camera = new Object3JSCamera();
+        private Camera3JS createCamera(GameObject gameObject) {
+            Camera3JS camera = new Camera3JS();
             Camera cameraComponent = gameObject.GetComponent<Camera>();
             camera.name = gameObject.name;
             camera.matrix = getMatrix(gameObject);
-
-            camera.fov = cameraComponent.fieldOfView;
-            camera.aspect = cameraComponent.aspect;
             camera.near = cameraComponent.nearClipPlane;
             camera.far = cameraComponent.farClipPlane;
+
+            // Create camera of desired type
+            if (cameraComponent.orthographic) {
+                // Orthographic
+                camera = new OrthographicCamera3JS(camera);
+                (camera as OrthographicCamera3JS).top = cameraComponent.rect.yMax;
+                (camera as OrthographicCamera3JS).bottom = cameraComponent.rect.yMin;
+                (camera as OrthographicCamera3JS).left = cameraComponent.rect.xMin;
+                (camera as OrthographicCamera3JS).top = cameraComponent.rect.xMax;
+            }
+            else {
+                // Perspective
+                camera = new PerspectiveCamera3JS(camera);
+                (camera as PerspectiveCamera3JS).fov = cameraComponent.fieldOfView;
+                (camera as PerspectiveCamera3JS).aspect = cameraComponent.aspect;
+            }
             // Parse children
             if (gameObject.transform.childCount > 0) {
                 foreach (Transform child in gameObject.transform) {
@@ -218,7 +304,6 @@ namespace Export3JS {
                 geometry.data.colors[i * 3 + 2] = color.g;
             }
             // Faces
-            int count = mesh.triangles.Length / 3;
             int subMeshCount = mesh.subMeshCount;
             if (subMeshCount > 1) code = code | FaceMask.FACE_MATERIAL;
             switch ((int)code) {
@@ -288,7 +373,24 @@ namespace Export3JS {
                 Material objMaterial = renderer.sharedMaterial;
                 // If cash contains the same material, get its uuid
                 // Else create a new one
-                if (!Utils.dictContainsValue(out uuid, materials, objMaterial)) {
+                if (Utils.dictContainsValue(out uuid, materials, objMaterial)) {
+                    Material3JS existingMatJS = content.materials.Find(x => (x.uuid.Equals(uuid)));
+                    if (existingMatJS == null) {
+                        // If we didn't find the material in main list, it has to be somewhere in multimaterials children
+                        // Let's loop through them to get the desired
+                        foreach (Material3JS material in content.materials) {
+                            if (material is MultiMaterial3JS) {
+                                existingMatJS = (material as MultiMaterial3JS).materials.Find(x => (x.uuid.Equals(uuid)));
+                                if (existingMatJS != null) {
+                                    // Copy the material to main list
+                                    content.materials.Add(existingMatJS);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                else {
                     uuid = createMaterial(objMaterial);
                 }
             }
@@ -350,7 +452,7 @@ namespace Export3JS {
             }
             // Opacity and wireframe
             matJS.opacity = mat.color.a;
-            matJS.transparent = false;
+            matJS.transparent = (mat.color.a < 1f);
             matJS.wireframe = false;
 
             content.materials.Add(matJS);
@@ -360,9 +462,10 @@ namespace Export3JS {
 
         private string createMultiMaterial(Material[] mats) {
             MultiMaterial3JS multiMatJS = new MultiMaterial3JS();
-            multiMatJS.name = "MultiMaterial";
+            string multName = string.Empty;
             foreach (Material mat in mats) {
                 string uuid = string.Empty;
+                multName += Utils.capitalizeFirstSymbol(mat.name.Substring(0, 5));
                 if (Utils.dictContainsValue(out uuid, materials, mat)) {
                     // If we already had the same material, find it
                     Material3JS existingMatJS = content.materials.Find(x => (x.uuid.Equals(uuid)));
@@ -389,7 +492,7 @@ namespace Export3JS {
                     content.materials.Remove(existingMatJS);
                 }
             }
-
+            multiMatJS.name = multName;
             content.materials.Add(multiMatJS);
             multiMaterials.Add(multiMatJS.uuid, mats);
             return multiMatJS.uuid;

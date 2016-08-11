@@ -27,6 +27,7 @@ namespace Export3JS {
             options.exportMeshes = true;
             options.exportCameras = true;
             options.exportDisabled = true;
+            options.castShadows = false;
         }
 
         void OnGUI() {
@@ -48,6 +49,9 @@ namespace Export3JS {
             options.exportLights = EditorGUILayout.Toggle("Lights", options.exportLights);
             options.exportDisabled = EditorGUILayout.Toggle("Disabled GameObjects", options.exportDisabled);
             EditorGUILayout.Space();
+            GUILayout.Label("Shadows", EditorStyles.boldLabel);
+            options.castShadows = EditorGUILayout.Toggle("Cast shadows", options.castShadows);
+            EditorGUILayout.Space();
             GUILayout.Label("Specify output location:", EditorStyles.boldLabel);
             GUILayout.BeginHorizontal();
             options.dir = GUILayout.TextField(options.dir);
@@ -65,6 +69,10 @@ namespace Export3JS {
 
         public static void ReportProgress(float value, string message = "") {
             EditorUtility.DisplayProgressBar("ThreeJS", message, value);
+        }
+
+        public static void ClearProgress() {
+            EditorUtility.ClearProgressBar();
         }
     }
 }

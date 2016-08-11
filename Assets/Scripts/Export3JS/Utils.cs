@@ -67,6 +67,14 @@ namespace Export3JS {
             return false;
         }
 
+        public static string capitalizeFirstSymbol(string str) {
+            if (!string.IsNullOrEmpty(str)) {
+                str = str.ToLower();
+                return (char.ToUpper(str[0]) + str.Substring(1));
+            }
+            else return string.Empty;
+        }
+
         public static int getIntColor(Color inputColor) {
             Color32 color = inputColor;
             int output = (color.r << 16) | (color.g << 8) | (color.b);
