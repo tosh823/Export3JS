@@ -6,7 +6,7 @@ namespace Export3JS.Model {
 
         public string version = "4.3";
         public string type = "Object";
-        public string generator = "Unity 3JS Exporter";
+        public string generator = "Unity Export3JS";
 
         public Metadata3JS() {
 

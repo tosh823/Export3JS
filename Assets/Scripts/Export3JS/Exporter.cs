@@ -47,8 +47,13 @@ namespace Export3JS {
 
         private void updateProgress() {
             objectsParsed++;
+            float value = objectsParsed / (float)objectTotal; 
+            ExporterWindow.ReportProgress(value, ("Parsing objects: " + objectsParsed + "/" + objectTotal));
+        }
+
+        private void updateProgressWithMessage(string message) {
             float value = objectsParsed / (float)objectTotal;
-            ExporterWindow.ReportProgress(value);
+            ExporterWindow.ReportProgress(value, message);
         }
 
         private void parseScene() {
@@ -84,6 +89,7 @@ namespace Export3JS {
                 Object3JS obj = parseGameObject(gameObject);
                 scene.children.Add(obj);
             }
+            updateProgressWithMessage("Writing JSON file");
         }
 
         private Object3JS parseGameObject(GameObject gameObject) {

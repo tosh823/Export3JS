@@ -31,7 +31,7 @@ namespace Export3JS.Model {
         public Geometry3JSMeta() {
             version = "4.0";
             type = "Geometry";
-            generator = "Unity 3JS Exporter";
+            generator = "Unity Export3JS";
         }
     }
 
