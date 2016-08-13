@@ -148,7 +148,7 @@ namespace Export3JS {
             ambientLight.name = "AmbientLight";
             ambientLight.matrix = Utils.getMatrixAsArray(Matrix4x4.identity);
             ambientLight.color = Utils.getIntColor(RenderSettings.ambientLight);
-            ambientLight.intensity = RenderSettings.ambientIntensity / 8.0f;
+            ambientLight.intensity = RenderSettings.ambientIntensity;
             return ambientLight;
         }
 
@@ -158,7 +158,7 @@ namespace Export3JS {
             light.name = gameObject.name;
             light.matrix = getMatrix(gameObject);
             light.color = Utils.getIntColor(lightComponent.color);
-            light.intensity = lightComponent.intensity / 8.0f;
+            light.intensity = lightComponent.intensity;
 
             // Create light of the type
             switch (lightComponent.type) {
