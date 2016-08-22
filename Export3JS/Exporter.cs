@@ -15,6 +15,7 @@ namespace Export3JS {
         public bool exportMeshes;
         public bool exportDisabled;
         public bool castShadows;
+        public string[] tags;
     }
 
     public class Exporter {
@@ -23,6 +24,9 @@ namespace Export3JS {
         private int objectTotal;
         private int objectsParsed;
         private Format4 content;
+        private TagsFormat tags;
+        private LightsConfig lights;
+        private bool checkTags;
         private Dictionary<string, Material> materials;
         private Dictionary<string, Material[]> multiMaterials;
         private Dictionary<string, Mesh> geometries;
@@ -32,15 +36,26 @@ namespace Export3JS {
             materials = new Dictionary<string, Material>();
             multiMaterials = new Dictionary<string, Material[]>();
             geometries = new Dictionary<string, Mesh>();
+            checkTags = false;
         }
 
         public void Export() {
             objectTotal = UnityEngine.Object.FindObjectsOfType<GameObject>().Length;
             objectsParsed = 0;
             parseScene();
+            // Write content
             string json = JsonConvert.SerializeObject(content, Formatting.Indented);
             string filename = SceneManager.GetActiveScene().name + ".json";
             System.IO.File.WriteAllText(options.dir + filename, json);
+            // Write tags data
+            string tagsJSON = JsonConvert.SerializeObject(tags, Formatting.Indented);
+            string tagsFilename = SceneManager.GetActiveScene().name + "Tags.json";
+            System.IO.File.WriteAllText(options.dir + tagsFilename, tagsJSON);
+            if (!lights.isEmpty()) {
+                string lightsJSON = JsonConvert.SerializeObject(lights, Formatting.Indented);
+                string lightsFilename = SceneManager.GetActiveScene().name + "LightsConfig.json";
+                System.IO.File.WriteAllText(options.dir + lightsFilename, lightsJSON);
+            }
             Debug.Log("Three.JS Exporter completed, " + DateTime.Now.ToLongTimeString());
             ExporterWindow.ClearProgress();
         }
@@ -57,7 +72,16 @@ namespace Export3JS {
         }
 
         private void parseScene() {
+            // Create content file
             content = new Format4();
+            lights = new LightsConfig();
+            if (options.tags.Length > 0) {
+                tags = new TagsFormat();
+                foreach (string tag in options.tags) {
+                    tags.tags.Add(tag, new List<string>());
+                }
+                checkTags = true;
+            }
             // Create base scene
             Scene3JS scene = new Scene3JS();
             scene.name = SceneManager.GetActiveScene().name;
@@ -106,6 +130,10 @@ namespace Export3JS {
                 }
                 else {
                     obj = createGroup(gameObject);
+                }
+                // Checking tags
+                if (checkTags && Utils.arraryContainsValue(options.tags, gameObject.tag)) {
+                    tags.tags[gameObject.tag].Add(obj.uuid);
                 }
                 updateProgress();
                 return obj;
@@ -178,6 +206,7 @@ namespace Export3JS {
                     (light as SpotLight3JS).angle = lightComponent.spotAngle * (Mathf.PI / 180);
                     (light as SpotLight3JS).penumbra = 0.5f;
                     (light as SpotLight3JS).castShadow = ((lightComponent.shadows != LightShadows.None) && options.castShadows);
+                    addSpotLightTarget(light.uuid, lightComponent);
                     break;
                 default:
                     Debug.Log("Unsupported light type");
@@ -726,6 +755,12 @@ namespace Export3JS {
             Vector3 unityScale = gameObject.transform.lossyScale;
             Matrix4x4 unityMatrix = Matrix4x4.TRS(unityPosition, unityQuartenion, unityScale);
             return Utils.getMatrixAsArray(unityMatrix);
+        }
+
+        private void addSpotLightTarget(string uuid, Light light) {
+            Vector3 target = light.transform.position + light.transform.forward * 1;
+            target.z *= -1;
+            lights.spotlights.Add(uuid, new float[3] { target.x, target.y, target.z });
         }
     }
 }

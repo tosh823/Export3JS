@@ -11,6 +11,7 @@ namespace Export3JS {
 
         private ExporterOptions options;
         private bool exportAll;
+        private bool selectTags;
 
         [MenuItem("ThreeJS/Export %#e")]
         static void Init() {
@@ -28,6 +29,8 @@ namespace Export3JS {
             options.exportCameras = true;
             options.exportDisabled = true;
             options.castShadows = false;
+            options.tags = new string[0];
+            selectTags = false;
         }
 
         void OnGUI() {
@@ -51,6 +54,16 @@ namespace Export3JS {
             EditorGUILayout.Space();
             GUILayout.Label("Shadows", EditorStyles.boldLabel);
             options.castShadows = EditorGUILayout.Toggle("Cast shadows", options.castShadows);
+            EditorGUILayout.Space();
+            selectTags = EditorGUILayout.Foldout(selectTags, "Tags");
+            if (selectTags) {
+                int count = options.tags.Length;
+                count = EditorGUILayout.IntField("Size", count);
+                if (count != options.tags.Length) options.tags = new string[count];
+                for (int i = 0; i < options.tags.Length; i++) {
+                    options.tags[i] = EditorGUILayout.TagField("Tag " + i, options.tags[i]);
+                }
+            }
             EditorGUILayout.Space();
             GUILayout.Label("Specify output location:", EditorStyles.boldLabel);
             GUILayout.BeginHorizontal();

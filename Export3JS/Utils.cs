@@ -67,6 +67,17 @@ namespace Export3JS {
             return false;
         }
 
+        public static bool arraryContainsValue<T>(T[] array, T value) {
+            bool contains = false;
+            foreach (T element in array) {
+                if (element.Equals(value)) {
+                    contains = true;
+                    break;
+                }
+            }
+            return contains;
+        }
+
         public static string capitalizeFirstSymbol(string str) {
             if (!string.IsNullOrEmpty(str)) {
                 str = str.ToLower();

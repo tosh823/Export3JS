@@ -21,4 +21,29 @@ namespace Export3JS.Model {
             @object = new Object3JS();
         }
     }
+
+    public class TagsFormat {
+        public Metadata3JS metadata;
+        public Dictionary<string, List<string>> tags;
+
+        public TagsFormat() {
+            metadata = new Metadata3JS();
+            tags = new Dictionary<string, List<string>>();
+        }
+    }
+
+    public class LightsConfig {
+        public Metadata3JS metadata;
+        public Dictionary<string, float[]> spotlights;
+
+        public LightsConfig() {
+            metadata = new Metadata3JS();
+            spotlights = new Dictionary<string, float[]>();
+        }
+
+        public bool isEmpty() {
+            if (spotlights.Count > 0) return false;
+            else return true;
+        }
+    }
 }
