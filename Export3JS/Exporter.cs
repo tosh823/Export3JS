@@ -296,7 +296,7 @@ namespace Export3JS {
             geometry.metadata.vertices = mesh.vertexCount;
             geometry.metadata.normals = mesh.normals.Length;
             geometry.metadata.uvs = mesh.uv.Length;
-            geometry.metadata.faces = mesh.triangles.Length;
+            geometry.metadata.faces = mesh.triangles.Length / 3;
             FaceMask code = FaceMask.TRIANGLE;
             // Vertices
             geometry.data.vertices = new float[mesh.vertexCount * 3];
@@ -567,7 +567,7 @@ namespace Export3JS {
             int[] faces = new int[mesh.triangles.Length + totalTrianglesCount];
             for (int i = 0; i < totalTrianglesCount; i++) {
                 int vertex = i * 3;
-                int pos = i + vertex;
+                int pos = i * 4;
                 faces[pos] = code;
                 faces[pos + 1] = mesh.triangles[vertex];
                 faces[pos + 2] = mesh.triangles[vertex + 2];
@@ -588,7 +588,7 @@ namespace Export3JS {
                 int trianglesCount = subMeshTriangles.Length / 3;
                 for (int i = 0; i < trianglesCount; i++) {
                     int vertex = i * 3;
-                    int pos = shift + i + vertex + i;
+                    int pos = shift + i * 5;
                     faces[pos] = code;
                     faces[pos + 1] = subMeshTriangles[vertex];
                     faces[pos + 2] = subMeshTriangles[vertex + 2];
@@ -607,7 +607,7 @@ namespace Export3JS {
             int[] faces = new int[2 * mesh.triangles.Length + totalTrianglesCount];
             for (int i = 0; i < totalTrianglesCount; i++) {
                 int vertex = i * 3;
-                int pos = i + vertex * 2;
+                int pos = i * 7;
                 faces[pos] = code;
                 faces[pos + 1] = mesh.triangles[vertex];
                 faces[pos + 2] = mesh.triangles[vertex + 2];
@@ -632,7 +632,7 @@ namespace Export3JS {
                 int trianglesCount = subMeshTriangles.Length / 3;
                 for (int i = 0; i < trianglesCount; i++) {
                     int vertex = i * 3;
-                    int pos = shift + i + vertex + i + vertex;
+                    int pos = shift + i * 8;
                     faces[pos] = code;
                     faces[pos + 1] = subMeshTriangles[vertex];
                     faces[pos + 2] = subMeshTriangles[vertex + 2];
@@ -654,7 +654,7 @@ namespace Export3JS {
             int[] faces = new int[2 * mesh.triangles.Length + totalTrianglesCount];
             for (int i = 0; i < totalTrianglesCount; i++) {
                 int vertex = i * 3;
-                int pos = i + vertex * 2;
+                int pos = i * 7;
                 faces[pos] = code;
                 faces[pos + 1] = mesh.triangles[vertex];
                 faces[pos + 2] = mesh.triangles[vertex + 2];
@@ -679,7 +679,7 @@ namespace Export3JS {
                 int trianglesCount = subMeshTriangles.Length / 3;
                 for (int i = 0; i < trianglesCount; i++) {
                     int vertex = i * 3;
-                    int pos = shift + i + vertex + i + vertex;
+                    int pos = shift + i * 8;
                     faces[pos] = code;
                     faces[pos + 1] = subMeshTriangles[vertex];
                     faces[pos + 2] = subMeshTriangles[vertex + 2];
@@ -702,7 +702,7 @@ namespace Export3JS {
             int[] faces = new int[3 * mesh.triangles.Length + totalTrianglesCount];
             for (int i = 0; i < totalTrianglesCount; i++) {
                 int vertex = i * 3;
-                int pos = i + vertex * 3;
+                int pos = i * 10;
                 faces[pos] = code;
                 faces[pos + 1] = mesh.triangles[vertex];
                 faces[pos + 2] = mesh.triangles[vertex + 2];
@@ -731,7 +731,7 @@ namespace Export3JS {
                 int trianglesCount = subMeshTriangles.Length / 3;
                 for (int i = 0; i < trianglesCount; i++) {
                     int vertex = i * 3;
-                    int pos = shift + i + vertex + i + vertex;
+                    int pos = shift + i * 11;
                     faces[pos] = code;
                     faces[pos + 1] = subMeshTriangles[vertex];
                     faces[pos + 2] = subMeshTriangles[vertex + 2];
@@ -741,8 +741,8 @@ namespace Export3JS {
                     faces[pos + 6] = subMeshTriangles[vertex + 2];
                     faces[pos + 7] = subMeshTriangles[vertex + 1];
                     faces[pos + 8] = subMeshTriangles[vertex];
-                    faces[pos + 7] = subMeshTriangles[vertex + 2];
-                    faces[pos + 9] = subMeshTriangles[vertex + 1];
+                    faces[pos + 9] = subMeshTriangles[vertex + 2];
+                    faces[pos + 10] = subMeshTriangles[vertex + 1];
                 }
                 shift += (3 * subMeshTriangles.Length + 2 * trianglesCount);
             }
