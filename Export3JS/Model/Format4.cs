@@ -30,6 +30,11 @@ namespace Export3JS.Model {
             metadata = new Metadata3JS();
             tags = new Dictionary<string, List<string>>();
         }
+
+        public bool isEmpty() {
+            if (tags.Count > 0) return false;
+            else return true;
+        }
     }
 
     public class LightsConfig {

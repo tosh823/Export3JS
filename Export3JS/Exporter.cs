@@ -43,14 +43,20 @@ namespace Export3JS {
             objectTotal = UnityEngine.Object.FindObjectsOfType<GameObject>().Length;
             objectsParsed = 0;
             parseScene();
+            JsonSerializerSettings settings = new JsonSerializerSettings {
+                NullValueHandling = NullValueHandling.Ignore
+            };
             // Write content
-            string json = JsonConvert.SerializeObject(content, Formatting.Indented);
+            string json = JsonConvert.SerializeObject(content, Formatting.Indented, settings);
             string filename = SceneManager.GetActiveScene().name + ".json";
             System.IO.File.WriteAllText(options.dir + filename, json);
-            // Write tags data
-            string tagsJSON = JsonConvert.SerializeObject(tags, Formatting.Indented);
-            string tagsFilename = SceneManager.GetActiveScene().name + "Tags.json";
-            System.IO.File.WriteAllText(options.dir + tagsFilename, tagsJSON);
+            // Write tags data if present
+            if (tags != null && !tags.isEmpty()) {
+                string tagsJSON = JsonConvert.SerializeObject(tags, Formatting.Indented);
+                string tagsFilename = SceneManager.GetActiveScene().name + "Tags.json";
+                System.IO.File.WriteAllText(options.dir + tagsFilename, tagsJSON);
+            }
+            // Write lights data if present
             if (!lights.isEmpty()) {
                 string lightsJSON = JsonConvert.SerializeObject(lights, Formatting.Indented);
                 string lightsFilename = SceneManager.GetActiveScene().name + "LightsConfig.json";
