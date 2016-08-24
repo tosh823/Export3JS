@@ -25,6 +25,7 @@ Place _Export3JS_ folder in your Unity project assets folder, and corresponding 
 
 # Usage
 In the exportation window select options you need and choose the folder for output file. 
+
 In **Tags** submenu you can choose tags you wanted to trace. Then exporter will also create _{SceneName}Tags.json_ file in the output folder with following format:
 ```javascript
 tags: {
