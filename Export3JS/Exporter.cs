@@ -493,7 +493,9 @@ namespace Export3JS {
             }
             // Opacity and wireframe
             matJS.opacity = mat.color.a;
-            matJS.transparent = (mat.color.a < 1f);
+            // 0 = Opaque, 1 = Cutout, 2 = Fade, 3 = Transparent.
+            // (At the time of version 5.4.0f3)
+            matJS.transparent = (mat.GetFloat("_Mode") != 0); 
             matJS.wireframe = false;
 
             content.materials.Add(matJS);
