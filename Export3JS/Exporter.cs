@@ -117,7 +117,7 @@ namespace Export3JS {
             GameObject[] rootObjects = SceneManager.GetActiveScene().GetRootGameObjects();
             foreach (GameObject gameObject in rootObjects) {
                 Object3JS obj = parseGameObject(gameObject);
-                scene.children.Add(obj);
+                if (obj != null) scene.children.Add(obj);
             }
             updateProgressWithMessage("Writing JSON file");
         }
