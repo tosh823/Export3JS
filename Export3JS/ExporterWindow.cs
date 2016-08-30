@@ -31,6 +31,7 @@ namespace Export3JS {
             options.castShadows = false;
             options.tags = new string[0];
             selectTags = false;
+            options.minifyJSON = true;
         }
 
         void OnGUI() {
@@ -64,6 +65,8 @@ namespace Export3JS {
                     options.tags[i] = EditorGUILayout.TagField("Tag " + i, options.tags[i]);
                 }
             }
+            EditorGUILayout.Space();
+            options.minifyJSON = EditorGUILayout.Toggle("Minify JSON", options.minifyJSON);
             EditorGUILayout.Space();
             GUILayout.Label("Specify output location:", EditorStyles.boldLabel);
             GUILayout.BeginHorizontal();
