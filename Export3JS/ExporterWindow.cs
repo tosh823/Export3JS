@@ -31,6 +31,7 @@ namespace Export3JS {
             options.castShadows = false;
             options.tags = new string[0];
             selectTags = false;
+            options.writePNGTextures = false;
             options.minifyJSON = true;
         }
 
@@ -65,6 +66,8 @@ namespace Export3JS {
                     options.tags[i] = EditorGUILayout.TagField("Tag " + i, options.tags[i]);
                 }
             }
+            EditorGUILayout.Space();
+            options.writePNGTextures = EditorGUILayout.Toggle("Write PNG Textures", options.writePNGTextures);
             EditorGUILayout.Space();
             options.minifyJSON = EditorGUILayout.Toggle("Minify JSON", options.minifyJSON);
             EditorGUILayout.Space();

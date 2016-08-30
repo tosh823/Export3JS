@@ -109,5 +109,38 @@ namespace Export3JS {
             }
             return url;
         }
+
+		public static string writeTextureAsPNG(Texture sourceTexture, string assetPath, string destination) {
+			string texturesDir = destination + "textures";
+            // The original file extension is not removed in order to prevent conflicts if there are textures with the
+            // same name but different file extension.
+			string filename = Path.GetFileName(assetPath) + ".png";
+			Directory.CreateDirectory(texturesDir);
+			string url = "textures/" + filename;
+
+			if (!File.Exists(destination + url)) {
+				Texture2D texture = (Texture2D) sourceTexture;
+				Color[] colors;
+				try {
+					colors = texture.GetPixels();
+				} catch( UnityException e ) {
+					Debug.LogError("Source texture is not readable. You have to mark the texture as readable from the" +
+						" texture import settings: " + e.ToString());
+					return null;
+				}
+				Texture2D convertedTexture = new Texture2D(texture.width, texture.height, TextureFormat.ARGB32, false);
+				convertedTexture.SetPixels(colors);
+				byte[] bytes = convertedTexture.EncodeToPNG();
+				FileStream f = File.Create(destination + url);
+				try {
+					f.Write(bytes, 0, bytes.Length);
+					f.Close();
+				} catch(IOException exception) {
+					Debug.Log("Error while writing PNG texture: " + exception.Message);
+					url = "";
+				}
+			}
+			return url;
+		}
     }
 }
