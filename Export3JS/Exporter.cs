@@ -551,7 +551,7 @@ namespace Export3JS {
             // Copying the texture file
             string relativePath = AssetDatabase.GetAssetPath(tex);
 			string url = null;
-            if (options.writePNGTextures) {
+            if (options.writePNGTextures && !Utils.isFormatSupported(relativePath)) {
                 url = Utils.writeTextureAsPNG(tex, relativePath, options.dir);
             } else {
                 url = Utils.copyTexture(relativePath, options.dir);

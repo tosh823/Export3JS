@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace Export3JS {
 
@@ -90,6 +91,20 @@ namespace Export3JS {
             Color32 color = inputColor;
             int output = (color.r << 16) | (color.g << 8) | (color.b);
             return output;
+        }
+
+        public static bool isFormatSupported(string assetPath) {
+            Regex pattern = new Regex(@"^*\.(?:png|jpg|gif|dds)$", RegexOptions.IgnoreCase);
+            string filename = Path.GetFileName(assetPath);
+            Match check = pattern.Match(filename);
+            if (check.Success) {
+                Debug.Log(filename + " matches pattern");
+                return true;
+            }
+            else {
+                Debug.Log(filename + " doesn't match pattern");
+                return false;
+            }
         }
 
         public static string copyTexture(string assetPath, string destination) {
