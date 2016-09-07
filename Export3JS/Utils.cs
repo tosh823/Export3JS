@@ -97,14 +97,8 @@ namespace Export3JS {
             Regex pattern = new Regex(@"^*\.(?:png|jpg|gif|dds)$", RegexOptions.IgnoreCase);
             string filename = Path.GetFileName(assetPath);
             Match check = pattern.Match(filename);
-            if (check.Success) {
-                Debug.Log(filename + " matches pattern");
-                return true;
-            }
-            else {
-                Debug.Log(filename + " doesn't match pattern");
-                return false;
-            }
+            if (check.Success) return true;
+            else return false;
         }
 
         public static string copyTexture(string assetPath, string destination) {
