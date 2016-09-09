@@ -42,6 +42,7 @@ namespace Export3JS {
         }
 
         public void Export() {
+            Debug.Log("Three.JS Exporter started, " + DateTime.Now.ToLongTimeString());
             objectTotal = UnityEngine.Object.FindObjectsOfType<GameObject>().Length;
             objectsParsed = 0;
             parseScene();

@@ -21,7 +21,6 @@ namespace Export3JS {
         }
 
         void OnEnable() {
-            Debug.Log("Three.JS Exporter started, " + DateTime.Now.ToLongTimeString());
             options = new ExporterOptions();
             options.dir = string.Empty;
             options.exportLights = true;
