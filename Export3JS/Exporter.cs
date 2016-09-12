@@ -453,11 +453,14 @@ namespace Export3JS {
             if (mat.HasProperty("_EmissionColor")) {
                 mat.EnableKeyword("_EMISSION");
                 matJS.emissive = Utils.getIntColor(mat.GetColor("_EmissionColor"));
+                matJS.emissiveIntensity = 1.0f;
             }
             // Values
             if (mat.HasProperty("_Emission")) {
                 // Standrad shader doesn't have this value in Unity 5 :(
-                matJS.emissiveIntensity = mat.GetFloat("_Emission");
+                // So set intensity of emission along with color 
+                //matJS.emissiveIntensity = mat.GetFloat("_Emission");
+                //matJS.emissiveIntensity = 1.0f;
             }
             if (mat.HasProperty("_Shininess")) {
                 matJS.shininess = mat.GetFloat("_Shininess");
