@@ -512,7 +512,7 @@ namespace Export3JS {
             string multName = string.Empty;
             foreach (Material mat in mats) {
                 string uuid = string.Empty;
-                multName += Utils.capitalizeFirstSymbol(mat.name.Substring(0, 5));
+                multName += Utils.capitalizeFirstSymbol(mat.name.Substring(0, mat.name.Length / 2));
                 if (Utils.dictContainsValue(out uuid, materials, mat)) {
                     // If we already had the same material, find it
                     Material3JS existingMatJS = content.materials.Find(x => (x.uuid.Equals(uuid)));
