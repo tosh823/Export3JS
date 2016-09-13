@@ -537,9 +537,10 @@ namespace Export3JS {
                     uuid = createMaterial(mat);
                     Material3JS existingMatJS = content.materials.Find(x => (x.uuid.Equals(uuid)));
                     multiMatJS.materials.Add(existingMatJS);
-                    // Because we created new material for the purpose of it
-                    // Remove it from other materials
+                    // Because we created new material for the purpose of multimaterial
+                    // Remove it from other general materials
                     content.materials.Remove(existingMatJS);
+                    materials.Remove(uuid);
                 }
             }
             multiMatJS.name = multName;
