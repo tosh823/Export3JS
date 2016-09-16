@@ -772,7 +772,7 @@ namespace Export3JS {
         private float[] getMatrix(GameObject gameObject) {
             Vector3 unityPosition = gameObject.transform.localPosition;
             Quaternion unityQuartenion = gameObject.transform.localRotation;
-            Vector3 unityScale = gameObject.transform.lossyScale;
+            Vector3 unityScale = gameObject.transform.localScale;
             Matrix4x4 unityMatrix = Matrix4x4.TRS(unityPosition, unityQuartenion, unityScale);
             return Utils.getMatrixAsArray(unityMatrix);
         }
